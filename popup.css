@@ -100,6 +100,22 @@ button.percaya {
   font-size: 11px;
 }
 
+.baris {
+  align-items: center;
+}
+
+.baris label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+select {
+  padding: 4px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+}
+
 .item button {
   margin-bottom: 4px;
 }

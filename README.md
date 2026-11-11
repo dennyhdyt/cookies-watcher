@@ -29,6 +29,7 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 - **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar.
 
 - **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang membuat Chrome/Edge menampilkan peringatan "mengelola ekstensi" saat memasang.
+- **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Ada juga pengingat berkala (mati secara bawaan): centang "Ingatkan saya setiap N hari" dan notifikasi akan muncul sesuai jaraknya. Pengingat memakai izin `alarms`.
 - **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri lewat popup. Catatan: pemantauan memakai daftar nama cookie sesi yang umum, jadi untuk situs yang memakai nama berbeda, tambahkan namanya di bagian "Nama cookie sesi".
 - **Nama cookie sesi:** tambahkan nama cookie sesi sendiri (berlaku untuk pemantauan dan pemindaian). Namanya bisa dicari lewat DevTools: F12, tab Application, Cookies.
 - **Keluar dari semua perangkat:** setiap peringatan punya tombol yang membuka halaman sesi/keamanan situs terkait (Facebook, Instagram, Google/YouTube, X, LinkedIn, GitHub). Alamat halaman bisa berubah kalau situsnya mengubah pengaturan.
@@ -53,4 +54,4 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 1. Deteksi domain pihak ketiga yang mencurigakan
 2. Nama cookie sesi per situs (saat ini berlaku untuk semua situs)
 3. Tautan "keluar dari semua perangkat" untuk situs tambahan
-4. Pengingat berkala untuk memeriksa aktivitas login di situs penting
+4. Mencatat kapan terakhir kamu mengecek aktivitas login tiap situs

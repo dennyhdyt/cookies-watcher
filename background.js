@@ -168,3 +168,60 @@ async function periksaEkstensiBaru(info) {
 
 chrome.management.onInstalled.addListener(periksaEkstensiBaru);
 chrome.management.onEnabled.addListener(periksaEkstensiBaru);
+
+// ---------- Pengingat berkala: cek aktivitas login ----------
+// Ekstensi tidak bisa melihat pemakaian cookie di perangkat lain, jadi kita
+// mengingatkan kamu memeriksa halaman aktivitas login di situs penting.
+// Pengaturannya (aktif/tidak dan jarak hari) disimpan dengan nama "pengingat".
+
+const NAMA_ALARM = "pengingat-aktivitas-login";
+
+async function ambilPengingat() {
+  const data = await chrome.storage.local.get("pengingat");
+  const p = Object.assign({ aktif: false, hari: 7 }, data.pengingat || {});
+  // Jaga supaya jarak hari wajar (1 sampai 90).
+  p.hari = Math.max(1, Math.min(90, Number(p.hari) || 7));
+  return p;
+}
+
+// Menyiapkan alarm sesuai pengaturan.
+// buatUlang = false: kalau alarm sudah ada, biarkan (supaya hitungan hari tidak
+//   diulang dari nol setiap browser dibuka).
+// buatUlang = true: dipakai saat pengaturan diubah.
+async function aturAlarm(buatUlang) {
+  const p = await ambilPengingat();
+  const alarm = await chrome.alarms.get(NAMA_ALARM);
+
+  if (!p.aktif) {
+    if (alarm) await chrome.alarms.clear(NAMA_ALARM);
+    return;
+  }
+  if (alarm && !buatUlang) return;
+
+  const menit = p.hari * 24 * 60;
+  await chrome.alarms.create(NAMA_ALARM, {
+    delayInMinutes: menit,
+    periodInMinutes: menit,
+  });
+}
+
+chrome.runtime.onInstalled.addListener(() => aturAlarm(false));
+chrome.runtime.onStartup.addListener(() => aturAlarm(false));
+
+// Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
+chrome.storage.onChanged.addListener((perubahan, area) => {
+  if (area === "local" && perubahan.pengingat) aturAlarm(true);
+});
+
+// Saat alarm berbunyi: tampilkan notifikasi.
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== NAMA_ALARM) return;
+  const p = await ambilPengingat();
+  chrome.notifications.create({
+    type: "basic",
+    iconUrl: "icon128.png",
+    title: "Waktunya cek aktivitas login",
+    message:
+      "Sudah " + p.hari + " hari. Buka Pemantau Cookies, bagian 'Periksa aktivitas login', lalu cari perangkat atau lokasi yang tidak kamu kenal.",
+  });
+});

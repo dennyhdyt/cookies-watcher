@@ -579,7 +579,62 @@ async function tampilkanEkstensiTepercaya() {
   }
 }
 
+// ---------- Bagian 7: Periksa aktivitas login + pengingat ----------
+
+// Menampilkan tombol ke halaman aktivitas login. Situs yang memakai halaman
+// yang sama (misalnya Google dan YouTube) digabung jadi satu baris.
+function tampilkanAktivitas() {
+  const wadah = document.getElementById("daftarAktivitas");
+  wadah.textContent = "";
+
+  const kelompok = new Map(); // alamat halaman -> daftar situs
+  for (const [situs, url] of Object.entries(HALAMAN_KELUAR)) {
+    if (!kelompok.has(url)) kelompok.set(url, []);
+    kelompok.get(url).push(situs);
+  }
+
+  for (const [url, daftarSitus] of kelompok) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const nama = document.createElement("span");
+    nama.textContent = daftarSitus.join(" / ");
+
+    const tombol = document.createElement("button");
+    tombol.className = "keamanan";
+    tombol.textContent = "Buka";
+    tombol.addEventListener("click", () => chrome.tabs.create({ url: url }));
+
+    chip.append(nama, tombol);
+    wadah.append(chip);
+  }
+}
+
+async function muatPengingat() {
+  const data = await chrome.storage.local.get("pengingat");
+  const p = Object.assign({ aktif: false, hari: 7 }, data.pengingat || {});
+  document.getElementById("centangPengingat").checked = p.aktif;
+  document.getElementById("pilihHari").value = String(p.hari);
+}
+
+async function simpanPengingat() {
+  const aktif = document.getElementById("centangPengingat").checked;
+  const hari = Number(document.getElementById("pilihHari").value);
+  const pesan = document.getElementById("pesanPengingat");
+
+  // background.js memantau perubahan ini dan menyesuaikan alarmnya sendiri.
+  await chrome.storage.local.set({ pengingat: { aktif: aktif, hari: hari } });
+  pesan.textContent = aktif
+    ? "Pengingat aktif: setiap " + hari + " hari."
+    : "Pengingat dimatikan.";
+}
+
+document.getElementById("centangPengingat").addEventListener("change", simpanPengingat);
+document.getElementById("pilihHari").addEventListener("change", simpanPengingat);
+
 // Jalankan saat popup dibuka
+tampilkanAktivitas();
+muatPengingat();
 tampilkanEkstensi();
 tampilkanPeringatan();
 tampilkanSitusDipantau();

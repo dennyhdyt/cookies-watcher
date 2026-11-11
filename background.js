@@ -4,6 +4,9 @@
 // cookies dan memberi peringatan kalau ada yang mencurigakan.
 // ============================================================
 
+// Memuat fungsi bersama untuk memeriksa ekstensi lain (lihat ekstensi.js).
+importScripts("ekstensi.js");
+
 // Situs-situs penting yang ingin kita jaga.
 const SITUS_PENTING = [
   "facebook.com",
@@ -138,3 +141,30 @@ chrome.cookies.onChanged.addListener(async (info) => {
   // Selain itu: mencurigakan! Catat dan beri peringatan.
   await simpanPeringatan(cookie, situs);
 });
+
+// ---------- Pemantauan ekstensi lain ----------
+
+// Dipanggil saat ada ekstensi baru dipasang atau diaktifkan.
+// Kalau ekstensi itu berizin cookies (atau bisa melihat lalu lintas web),
+// kita beri notifikasi supaya kamu bisa memeriksanya.
+async function periksaEkstensiBaru(info) {
+  if (!bisaDiperiksa(info)) return;
+
+  const tepercaya = await ambilEkstensiTepercaya();
+  if (tepercaya.some((t) => t.id === info.id)) return;
+
+  const hasil = periksaEkstensi(info);
+  if (hasil.alasan.length === 0) return;
+
+  chrome.notifications.create({
+    type: "basic",
+    iconUrl: "icon128.png",
+    title: hasil.tinggi
+      ? "Ekstensi berisiko tinggi terdeteksi"
+      : "Ekstensi berizin cookies terdeteksi",
+    message: info.name + ": " + hasil.alasan.join("; ") + ". Buka Pemantau Cookies untuk memeriksanya.",
+  });
+}
+
+chrome.management.onInstalled.addListener(periksaEkstensiBaru);
+chrome.management.onEnabled.addListener(periksaEkstensiBaru);

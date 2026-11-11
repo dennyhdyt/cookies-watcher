@@ -467,7 +467,120 @@ document.getElementById("inputNamaSesi").addEventListener("keydown", (e) => {
   if (e.key === "Enter") tambahNamaSesi();
 });
 
+// ---------- Bagian 6: Ekstensi berizin cookies ----------
+
+async function tambahEkstensiTepercaya(info) {
+  const daftar = await ambilEkstensiTepercaya();
+  if (!daftar.some((t) => t.id === info.id)) {
+    daftar.push({ id: info.id, nama: info.name });
+    await chrome.storage.local.set({ ekstensiTepercaya: daftar });
+  }
+}
+
+async function tampilkanEkstensi() {
+  const wadah = document.getElementById("daftarEkstensi");
+  wadah.textContent = "Memeriksa...";
+
+  let hasil;
+  try {
+    hasil = await ambilEkstensiBerisiko();
+  } catch (e) {
+    wadah.textContent = "Tidak bisa membaca daftar ekstensi.";
+    return;
+  }
+  wadah.textContent = "";
+
+  if (hasil.length === 0) {
+    const p = document.createElement("div");
+    p.className = "kosong";
+    p.textContent = "Tidak ada ekstensi lain yang berizin cookies. Bagus!";
+    wadah.append(p);
+  }
+
+  for (const h of hasil) {
+    const info = h.info;
+    const tingkat = h.tinggi ? "risiko tinggi" : "risiko sedang";
+
+    // Tombol utama: nonaktifkan (bisa diaktifkan lagi lewat halaman extensions).
+    const item = buatItem(
+      info.name + " (" + tingkat + ")",
+      h.alasan.join("; "),
+      "Nonaktifkan",
+      async () => {
+        try {
+          await chrome.management.setEnabled(info.id, false);
+        } catch (e) {
+          alert("Tidak bisa menonaktifkan ekstensi ini (mungkin diatur oleh administrator).");
+          return;
+        }
+        tampilkanEkstensi();
+      },
+      h.tinggi
+    );
+
+    const tombolHapus = document.createElement("button");
+    tombolHapus.className = "hapus";
+    tombolHapus.textContent = "Hapus ekstensi";
+    tombolHapus.addEventListener("click", async () => {
+      try {
+        // Browser menampilkan kotak konfirmasinya sendiri.
+        await chrome.management.uninstall(info.id, { showConfirmDialog: true });
+      } catch (e) {
+        return; // dibatalkan atau tidak bisa dihapus
+      }
+      tampilkanEkstensi();
+    });
+
+    const tombolPercaya = document.createElement("button");
+    tombolPercaya.className = "percaya";
+    tombolPercaya.textContent = "Percayai";
+    tombolPercaya.addEventListener("click", async () => {
+      if (!confirm("Percayai '" + info.name + "'? Ekstensi ini tidak akan ditandai lagi.")) return;
+      await tambahEkstensiTepercaya(info);
+      tampilkanEkstensi();
+    });
+
+    item.append(tombolHapus, tombolPercaya);
+    wadah.append(item);
+  }
+
+  await tampilkanEkstensiTepercaya();
+}
+
+async function tampilkanEkstensiTepercaya() {
+  const wadah = document.getElementById("daftarEkstensiTepercaya");
+  wadah.textContent = "";
+
+  const daftar = await ambilEkstensiTepercaya();
+  if (daftar.length === 0) return;
+
+  const judul = document.createElement("div");
+  judul.className = "info";
+  judul.textContent = "Ekstensi yang kamu percayai:";
+  wadah.append(judul);
+
+  for (const t of daftar) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const nama = document.createElement("span");
+    nama.textContent = t.nama;
+
+    const tombol = document.createElement("button");
+    tombol.textContent = "Keluarkan";
+    tombol.addEventListener("click", async () => {
+      const sisa = (await ambilEkstensiTepercaya()).filter((x) => x.id !== t.id);
+      await chrome.storage.local.set({ ekstensiTepercaya: sisa });
+      tampilkanEkstensi();
+    });
+
+    chip.append(nama, tombol);
+    wadah.append(chip);
+  }
+}
+
 // Jalankan saat popup dibuka
+tampilkanEkstensi();
 tampilkanPeringatan();
 tampilkanSitusDipantau();
 tampilkanNamaSesi();

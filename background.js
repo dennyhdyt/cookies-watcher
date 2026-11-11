@@ -38,10 +38,18 @@ function bersihkanDomain(domain) {
   return domain.replace(/^\./, "");
 }
 
-// Cek apakah domain cookie termasuk situs penting. Kalau ya, kembalikan nama situsnya.
-function cariSitusPenting(domain) {
+// Gabungan situs bawaan + situs tambahan yang kamu tambah sendiri lewat popup.
+// Situs tambahan disimpan di chrome.storage dengan nama "situsTambahan".
+async function ambilSitusDipantau() {
+  const data = await chrome.storage.local.get("situsTambahan");
+  return SITUS_PENTING.concat(data.situsTambahan || []);
+}
+
+// Cek apakah domain cookie termasuk situs yang dipantau. Kalau ya, kembalikan nama situsnya.
+async function cariSitusPenting(domain) {
   const d = bersihkanDomain(domain);
-  return SITUS_PENTING.find((situs) => d === situs || d.endsWith("." + situs));
+  const daftar = await ambilSitusDipantau();
+  return daftar.find((situs) => d === situs || d.endsWith("." + situs));
 }
 
 // Cek apakah domain ada di daftar putih (situs yang kamu percaya).
@@ -110,7 +118,7 @@ chrome.cookies.onChanged.addListener(async (info) => {
   if (!NAMA_COOKIE_SESI.includes(cookie.name.toLowerCase())) return;
 
   // 2) Apakah ini milik situs penting?
-  const situs = cariSitusPenting(cookie.domain);
+  const situs = await cariSitusPenting(cookie.domain);
   if (!situs) return;
 
   // 2b) Kalau situs ada di daftar putih, abaikan.

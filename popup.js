@@ -13,6 +13,12 @@ const NAMA_COOKIE_SESI = [
   "auth_token", "token", "access_token", "li_at", "user_session",
 ];
 
+// Situs bawaan yang selalu dipantau (harus sama dengan SITUS_PENTING di background.js)
+const SITUS_BAWAAN = [
+  "facebook.com", "instagram.com", "google.com", "youtube.com", "tiktok.com",
+  "x.com", "twitter.com", "linkedin.com", "github.com",
+];
+
 function bersihkanDomain(domain) {
   return domain.replace(/^\./, "");
 }
@@ -280,6 +286,85 @@ document.getElementById("inputSitus").addEventListener("keydown", (e) => {
   if (e.key === "Enter") tambahDariInput();
 });
 
+// ---------- Bagian 4: Situs yang dipantau ----------
+
+async function ambilSitusTambahan() {
+  const data = await chrome.storage.local.get("situsTambahan");
+  return data.situsTambahan || [];
+}
+
+async function tampilkanSitusDipantau() {
+  const wadah = document.getElementById("daftarDipantau");
+  wadah.textContent = "";
+
+  const tambahan = await ambilSitusTambahan();
+
+  // Situs bawaan: tidak bisa dihapus
+  for (const situs of SITUS_BAWAAN) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const nama = document.createElement("span");
+    nama.textContent = situs;
+
+    const label = document.createElement("span");
+    label.className = "bawaan";
+    label.textContent = "bawaan";
+
+    chip.append(nama, label);
+    wadah.append(chip);
+  }
+
+  // Situs tambahan dari kamu: bisa dihapus
+  for (const situs of tambahan) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const nama = document.createElement("span");
+    nama.textContent = situs;
+
+    const tombol = document.createElement("button");
+    tombol.textContent = "Hapus";
+    tombol.addEventListener("click", async () => {
+      const sisa = (await ambilSitusTambahan()).filter((s) => s !== situs);
+      await chrome.storage.local.set({ situsTambahan: sisa });
+      tampilkanSitusDipantau();
+    });
+
+    chip.append(nama, tombol);
+    wadah.append(chip);
+  }
+}
+
+async function tambahSitusDipantau() {
+  const input = document.getElementById("inputDipantau");
+  const pesan = document.getElementById("pesanDipantau");
+
+  const situs = rapikanNamaSitus(input.value);
+  if (!situs) {
+    pesan.textContent = "Format tidak valid. Contoh yang benar: tokopedia.com";
+    return;
+  }
+
+  const tambahan = await ambilSitusTambahan();
+  if (SITUS_BAWAAN.includes(situs) || tambahan.includes(situs)) {
+    pesan.textContent = situs + " sudah ada di daftar.";
+    return;
+  }
+
+  tambahan.push(situs);
+  await chrome.storage.local.set({ situsTambahan: tambahan });
+  pesan.textContent = situs + " ditambahkan ke daftar pantauan.";
+  input.value = "";
+  tampilkanSitusDipantau();
+}
+
+document.getElementById("tombolTambahDipantau").addEventListener("click", tambahSitusDipantau);
+document.getElementById("inputDipantau").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tambahSitusDipantau();
+});
+
 // Jalankan saat popup dibuka
 tampilkanPeringatan();
+tampilkanSitusDipantau();
 tampilkanDaftarPutih();

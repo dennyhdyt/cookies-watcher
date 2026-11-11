@@ -100,6 +100,15 @@ button.percaya {
   font-size: 11px;
 }
 
+.item button {
+  margin-bottom: 4px;
+}
+
+button.keamanan {
+  background: #f9ab00;
+  color: #202124;
+}
+
 .bawaan {
   color: #5f6368;
   font-size: 11px;

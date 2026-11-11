@@ -19,6 +19,20 @@ const SITUS_BAWAAN = [
   "x.com", "twitter.com", "linkedin.com", "github.com",
 ];
 
+// Halaman untuk melihat dan mengakhiri sesi login di tiap situs.
+// Alamat ini bisa berubah sewaktu-waktu kalau situsnya mengubah pengaturan.
+// TikTok tidak punya halaman web yang stabil, jadi tidak disertakan.
+const HALAMAN_KELUAR = {
+  "facebook.com": "https://www.facebook.com/settings?tab=security",
+  "instagram.com": "https://accountscenter.instagram.com/password_and_security/",
+  "google.com": "https://myaccount.google.com/device-activity",
+  "youtube.com": "https://myaccount.google.com/device-activity",
+  "x.com": "https://x.com/settings/sessions",
+  "twitter.com": "https://x.com/settings/sessions",
+  "linkedin.com": "https://www.linkedin.com/psettings/sessions",
+  "github.com": "https://github.com/settings/sessions",
+};
+
 function bersihkanDomain(domain) {
   return domain.replace(/^\./, "");
 }
@@ -155,6 +169,18 @@ async function tampilkanPeringatan() {
     });
     item.append(tombolPercaya);
 
+    // Tombol ketiga: buka halaman untuk keluar dari semua perangkat (kalau ada).
+    const halaman = HALAMAN_KELUAR[p.situs];
+    if (halaman) {
+      const tombolKeamanan = document.createElement("button");
+      tombolKeamanan.className = "keamanan";
+      tombolKeamanan.textContent = "Keluar dari semua perangkat";
+      tombolKeamanan.addEventListener("click", () => {
+        chrome.tabs.create({ url: halaman });
+      });
+      item.append(tombolKeamanan);
+    }
+
     wadah.append(item);
   });
 }
@@ -178,9 +204,9 @@ document.getElementById("bersihkanPeringatan").addEventListener("click", async (
 // ---------- Bagian 2: Pemindaian ----------
 
 // Mengembalikan daftar alasan risiko untuk satu cookie (kosong = aman).
-function periksaRisiko(cookie) {
+function periksaRisiko(cookie, namaSesi) {
   const alasan = [];
-  const cookieSesi = NAMA_COOKIE_SESI.includes(cookie.name.toLowerCase());
+  const cookieSesi = namaSesi.includes(cookie.name.toLowerCase());
 
   if (!cookieSesi) return alasan; // versi awal: hanya periksa cookie sesi
 
@@ -201,6 +227,7 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
   wadah.textContent = "Memindai...";
 
   const daftarPutih = await ambilDaftarPutih();
+  const namaSesi = NAMA_COOKIE_SESI.concat(await ambilNamaTambahan());
   const semuaCookie = await chrome.cookies.getAll({});
   wadah.textContent = "";
 
@@ -209,7 +236,7 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
     // Lewati situs yang ada di daftar putih.
     if (cocokDaftarPutih(cookie.domain, daftarPutih)) continue;
 
-    const alasan = periksaRisiko(cookie);
+    const alasan = periksaRisiko(cookie, namaSesi);
     if (alasan.length === 0) continue;
 
     jumlah++;
@@ -364,7 +391,84 @@ document.getElementById("inputDipantau").addEventListener("keydown", (e) => {
   if (e.key === "Enter") tambahSitusDipantau();
 });
 
+// ---------- Bagian 5: Nama cookie sesi tambahan ----------
+
+async function ambilNamaTambahan() {
+  const data = await chrome.storage.local.get("namaCookieTambahan");
+  return data.namaCookieTambahan || [];
+}
+
+// Nama cookie hanya boleh huruf, angka, garis bawah, titik, dan strip.
+// Hasilnya huruf kecil karena pencocokan dilakukan tanpa membedakan besar-kecil.
+function rapikanNamaCookie(teks) {
+  const t = teks.trim().toLowerCase();
+  if (!/^[a-z0-9_.-]{1,60}$/.test(t)) return null;
+  return t;
+}
+
+async function tampilkanNamaSesi() {
+  const wadah = document.getElementById("daftarNamaSesi");
+  wadah.textContent = "";
+
+  const daftar = await ambilNamaTambahan();
+  if (daftar.length === 0) {
+    const p = document.createElement("div");
+    p.className = "kosong";
+    p.textContent = "Belum ada nama tambahan.";
+    wadah.append(p);
+    return;
+  }
+
+  for (const nama of daftar) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const teks = document.createElement("span");
+    teks.textContent = nama;
+
+    const tombol = document.createElement("button");
+    tombol.textContent = "Hapus";
+    tombol.addEventListener("click", async () => {
+      const sisa = (await ambilNamaTambahan()).filter((n) => n !== nama);
+      await chrome.storage.local.set({ namaCookieTambahan: sisa });
+      tampilkanNamaSesi();
+    });
+
+    chip.append(teks, tombol);
+    wadah.append(chip);
+  }
+}
+
+async function tambahNamaSesi() {
+  const input = document.getElementById("inputNamaSesi");
+  const pesan = document.getElementById("pesanNamaSesi");
+
+  const nama = rapikanNamaCookie(input.value);
+  if (!nama) {
+    pesan.textContent = "Nama tidak valid. Pakai huruf, angka, _ . atau - (maksimal 60 karakter).";
+    return;
+  }
+
+  const daftar = await ambilNamaTambahan();
+  if (NAMA_COOKIE_SESI.includes(nama) || daftar.includes(nama)) {
+    pesan.textContent = nama + " sudah termasuk.";
+    return;
+  }
+
+  daftar.push(nama);
+  await chrome.storage.local.set({ namaCookieTambahan: daftar });
+  pesan.textContent = nama + " ditambahkan.";
+  input.value = "";
+  tampilkanNamaSesi();
+}
+
+document.getElementById("tombolTambahNamaSesi").addEventListener("click", tambahNamaSesi);
+document.getElementById("inputNamaSesi").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tambahNamaSesi();
+});
+
 // Jalankan saat popup dibuka
 tampilkanPeringatan();
 tampilkanSitusDipantau();
+tampilkanNamaSesi();
 tampilkanDaftarPutih();

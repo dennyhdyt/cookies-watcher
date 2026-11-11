@@ -33,6 +33,13 @@ const NAMA_COOKIE_SESI = [
   "user_session",
 ];
 
+// Gabungan nama cookie sesi bawaan + nama tambahan dari kamu (disimpan
+// di chrome.storage dengan nama "namaCookieTambahan").
+async function ambilNamaSesi() {
+  const data = await chrome.storage.local.get("namaCookieTambahan");
+  return NAMA_COOKIE_SESI.concat(data.namaCookieTambahan || []);
+}
+
 // Menghapus titik di depan domain. Contoh: ".facebook.com" -> "facebook.com"
 function bersihkanDomain(domain) {
   return domain.replace(/^\./, "");
@@ -115,7 +122,8 @@ chrome.cookies.onChanged.addListener(async (info) => {
   const cookie = info.cookie;
 
   // 1) Apakah ini cookie sesi?
-  if (!NAMA_COOKIE_SESI.includes(cookie.name.toLowerCase())) return;
+  const namaSesi = await ambilNamaSesi();
+  if (!namaSesi.includes(cookie.name.toLowerCase())) return;
 
   // 2) Apakah ini milik situs penting?
   const situs = await cariSitusPenting(cookie.domain);

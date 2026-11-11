@@ -44,6 +44,15 @@ function cariSitusPenting(domain) {
   return SITUS_PENTING.find((situs) => d === situs || d.endsWith("." + situs));
 }
 
+// Cek apakah domain ada di daftar putih (situs yang kamu percaya).
+// Daftar putih disimpan di chrome.storage dengan nama "daftarPutih".
+async function dalamDaftarPutih(domain) {
+  const data = await chrome.storage.local.get("daftarPutih");
+  const daftar = data.daftarPutih || [];
+  const d = bersihkanDomain(domain);
+  return daftar.some((situs) => d === situs || d.endsWith("." + situs));
+}
+
 // Cek apakah ada tab yang sedang membuka situs tersebut.
 async function adaTabTerbuka(situs) {
   const semuaTab = await chrome.tabs.query({});
@@ -103,6 +112,9 @@ chrome.cookies.onChanged.addListener(async (info) => {
   // 2) Apakah ini milik situs penting?
   const situs = cariSitusPenting(cookie.domain);
   if (!situs) return;
+
+  // 2b) Kalau situs ada di daftar putih, abaikan.
+  if (await dalamDaftarPutih(cookie.domain)) return;
 
   // 3) Kalau kamu sedang membuka situs itu, perubahan cookie wajar (misalnya login).
   if (await adaTabTerbuka(situs)) return;

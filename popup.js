@@ -3,7 +3,8 @@
 // Mengatur tampilan saat ikon ekstensi diklik:
 //   1) Menampilkan daftar peringatan dari background.js
 //   2) Memindai cookies dan menandai yang berisiko
-//   3) Menghapus cookie lewat tombol
+//   3) Mengelola daftar putih (situs yang dipercaya)
+//   4) Menghapus cookie lewat tombol
 // ============================================================
 
 // Nama cookie yang biasanya berisi sesi login (sama seperti di background.js)
@@ -51,6 +52,62 @@ function buatItem(judul, alasan, labelTombol, aksi, bahaya) {
   return kotak;
 }
 
+// ---------- Daftar putih: fungsi bantu ----------
+
+// Mengambil daftar putih dari penyimpanan ekstensi.
+async function ambilDaftarPutih() {
+  const data = await chrome.storage.local.get("daftarPutih");
+  return data.daftarPutih || [];
+}
+
+// Apakah domain ini cocok dengan salah satu situs di daftar putih?
+// Contoh: "accounts.google.com" cocok dengan "google.com".
+function cocokDaftarPutih(domain, daftarPutih) {
+  const d = bersihkanDomain(domain);
+  return daftarPutih.some((situs) => d === situs || d.endsWith("." + situs));
+}
+
+// Merapikan teks yang diketik. "https://www.GitHub.com/abc" -> "github.com"
+// Mengembalikan null kalau bentuknya bukan domain yang valid.
+function rapikanNamaSitus(teks) {
+  let t = teks.trim().toLowerCase();
+  if (!t) return null;
+  t = t.replace(/^https?:\/\//, "");
+  t = t.split("/")[0].split("?")[0].split("#")[0];
+  t = t.replace(/^www\./, "").replace(/^\./, "");
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(t)) return null;
+  return t;
+}
+
+// Menambah satu situs ke daftar putih, lalu membuang peringatan lama dari situs itu.
+async function tambahKeDaftarPutih(situs) {
+  const daftar = await ambilDaftarPutih();
+  if (!daftar.includes(situs)) {
+    daftar.push(situs);
+    await chrome.storage.local.set({ daftarPutih: daftar });
+  }
+
+  // Peringatan yang sudah ada dari situs ini ikut dibuang.
+  const data = await chrome.storage.local.get("peringatan");
+  const sisa = (data.peringatan || []).filter(
+    (p) => !cocokDaftarPutih(p.domain, [situs])
+  );
+  await chrome.storage.local.set({ peringatan: sisa });
+  await chrome.action.setBadgeText({ text: sisa.length ? String(sisa.length) : "" });
+
+  tampilkanPeringatan();
+  tampilkanDaftarPutih();
+}
+
+// Mengeluarkan satu situs dari daftar putih.
+async function hapusDariDaftarPutih(situs) {
+  const daftar = await ambilDaftarPutih();
+  await chrome.storage.local.set({
+    daftarPutih: daftar.filter((s) => s !== situs),
+  });
+  tampilkanDaftarPutih();
+}
+
 // ---------- Bagian 1: Peringatan ----------
 
 async function tampilkanPeringatan() {
@@ -81,6 +138,17 @@ async function tampilkanPeringatan() {
       },
       true
     );
+
+    // Tombol kedua: masukkan situs ini ke daftar putih.
+    const tombolPercaya = document.createElement("button");
+    tombolPercaya.className = "percaya";
+    tombolPercaya.textContent = "Percayai situs ini";
+    tombolPercaya.addEventListener("click", async () => {
+      if (!confirm("Percayai " + p.situs + "? Peringatan dari situs ini tidak akan muncul lagi.")) return;
+      await tambahKeDaftarPutih(p.situs);
+    });
+    item.append(tombolPercaya);
+
     wadah.append(item);
   });
 }
@@ -126,11 +194,15 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
   const wadah = document.getElementById("hasilPindai");
   wadah.textContent = "Memindai...";
 
+  const daftarPutih = await ambilDaftarPutih();
   const semuaCookie = await chrome.cookies.getAll({});
   wadah.textContent = "";
 
   let jumlah = 0;
   for (const cookie of semuaCookie) {
+    // Lewati situs yang ada di daftar putih.
+    if (cocokDaftarPutih(cookie.domain, daftarPutih)) continue;
+
     const alasan = periksaRisiko(cookie);
     if (alasan.length === 0) continue;
 
@@ -157,5 +229,57 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
   }
 });
 
+// ---------- Bagian 3: Daftar putih ----------
+
+async function tampilkanDaftarPutih() {
+  const wadah = document.getElementById("daftarPutih");
+  wadah.textContent = "";
+
+  const daftar = await ambilDaftarPutih();
+  if (daftar.length === 0) {
+    const p = document.createElement("div");
+    p.className = "kosong";
+    p.textContent = "Belum ada situs di daftar putih.";
+    wadah.append(p);
+    return;
+  }
+
+  for (const situs of daftar) {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+
+    const nama = document.createElement("span");
+    nama.textContent = situs;
+
+    const tombol = document.createElement("button");
+    tombol.textContent = "Keluarkan";
+    tombol.addEventListener("click", () => hapusDariDaftarPutih(situs));
+
+    chip.append(nama, tombol);
+    wadah.append(chip);
+  }
+}
+
+async function tambahDariInput() {
+  const input = document.getElementById("inputSitus");
+  const pesan = document.getElementById("pesanDaftarPutih");
+
+  const situs = rapikanNamaSitus(input.value);
+  if (!situs) {
+    pesan.textContent = "Format tidak valid. Contoh yang benar: github.com";
+    return;
+  }
+
+  await tambahKeDaftarPutih(situs);
+  pesan.textContent = situs + " ditambahkan ke daftar putih.";
+  input.value = "";
+}
+
+document.getElementById("tombolTambah").addEventListener("click", tambahDariInput);
+document.getElementById("inputSitus").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tambahDariInput();
+});
+
 // Jalankan saat popup dibuka
 tampilkanPeringatan();
+tampilkanDaftarPutih();

@@ -67,6 +67,39 @@ button.kecil {
   font-size: 11px;
 }
 
+.baris {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+}
+
+button.percaya {
+  background: #188038;
+}
+
+.chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.chip button {
+  background: #5f6368;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
 .tips {
   background: #fef7e0;
   border-radius: 6px;

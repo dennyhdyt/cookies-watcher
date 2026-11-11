@@ -27,6 +27,8 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 - **Peringatan:** cookie sesi di situs penting (Facebook, Google, dll.) dibuat atau diubah padahal tidak ada tab yang membuka situs itu.
 - **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar.
 
+- **Daftar putih:** situs yang kamu percaya tidak memicu peringatan dan tidak muncul di hasil pemindaian. Tambahkan lewat kolom input di popup, atau tombol "Percayai situs ini" pada peringatan. Subdomain ikut dihitung (menambah `google.com` juga mencakup `accounts.google.com`).
+
 Ini heuristik (tebakan berdasarkan tanda-tanda), bukan bukti pasti pembajakan, jadi
 kadang bisa salah peringatan.
 
@@ -37,8 +39,7 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 
 ## Ide pengembangan berikutnya
 
-1. Daftar putih (situs yang dipercaya tidak diperingatkan)
-2. Pengaturan untuk menambah situs penting sendiri
-3. Deteksi domain pihak ketiga yang mencurigakan
-4. Tautan langsung ke halaman "keluar dari semua perangkat" tiap platform
-5. Memantau ekstensi baru yang meminta izin cookies
+1. Pengaturan untuk menambah situs penting sendiri (yang dipantau)
+2. Deteksi domain pihak ketiga yang mencurigakan
+3. Tautan langsung ke halaman "keluar dari semua perangkat" tiap platform
+4. Memantau ekstensi baru yang meminta izin cookies

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Pemantau Cookies</title>
+  </head>
+  <body>
+    <h1>Pemantau Cookies</h1>
+
+    <section>
+      <h2>Peringatan</h2>
+      <div id="peringatan"></div>
+      <button id="bersihkanPeringatan" class="kecil">Bersihkan semua peringatan</button>
+    </section>
+
+    <section>
+      <h2>Pemindaian cookies</h2>
+      <p class="info">Mencari cookies sesi dengan pengaturan keamanan lemah.</p>
+      <button id="tombolPindai">Pindai sekarang</button>
+      <div id="hasilPindai"></div>
+    </section>
+
+    <section class="tips">
+      <strong>Kalau akunmu terasa dibajak:</strong> menghapus cookie di sini
+      saja tidak cukup. Segera ganti password dan pilih
+      "keluar dari semua perangkat" di situs tersebut.
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

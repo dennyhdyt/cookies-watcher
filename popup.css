@@ -1,0 +1,81 @@
+body {
+  width: 380px;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  margin: 0;
+  padding: 12px;
+  color: #202124;
+}
+
+h1 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+h2 {
+  font-size: 14px;
+  margin: 12px 0 6px;
+}
+
+section {
+  margin-bottom: 8px;
+}
+
+.info {
+  margin: 0 0 6px;
+  color: #5f6368;
+}
+
+.item {
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+}
+
+.item .judul {
+  font-weight: bold;
+  word-break: break-all;
+}
+
+.item .alasan {
+  color: #5f6368;
+  margin: 2px 0 6px;
+}
+
+.item.bahaya {
+  border-color: #d93025;
+  background: #fce8e6;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: #1a73e8;
+  color: white;
+}
+
+button.hapus {
+  background: #d93025;
+  margin-right: 6px;
+}
+
+button.kecil {
+  background: #5f6368;
+  font-size: 11px;
+}
+
+.tips {
+  background: #fef7e0;
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 12px;
+}
+
+.kosong {
+  color: #5f6368;
+  font-style: italic;
+  margin-bottom: 6px;
+}

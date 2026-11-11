@@ -1,74 +1,33 @@
 // ============================================================
 // background.js
 // Berjalan di latar belakang. Tugasnya: memantau setiap perubahan
-// cookies dan memberi peringatan kalau ada yang mencurigakan.
+// cookies, memantau ekstensi baru, dan mengirim pengingat berkala.
 // ============================================================
 
-// Memuat fungsi bersama untuk memeriksa ekstensi lain (lihat ekstensi.js).
-importScripts("ekstensi.js");
+// Memuat data dan fungsi bersama (lihat umum.js dan ekstensi.js).
+importScripts("umum.js", "ekstensi.js");
 
-// Situs-situs penting yang ingin kita jaga.
-const SITUS_PENTING = [
-  "facebook.com",
-  "instagram.com",
-  "google.com",
-  "youtube.com",
-  "tiktok.com",
-  "x.com",
-  "twitter.com",
-  "linkedin.com",
-  "github.com",
-];
+// ---------- Fungsi bantu ----------
 
-// Nama cookie yang biasanya menyimpan "sesi login".
-// Kalau cookie ini dicuri, orang lain bisa masuk ke akunmu.
-const NAMA_COOKIE_SESI = [
-  "sessionid",
-  "session",
-  "sid",
-  "ssid",
-  "c_user",
-  "xs",
-  "auth_token",
-  "token",
-  "access_token",
-  "li_at",
-  "user_session",
-];
-
-// Gabungan nama cookie sesi bawaan + nama tambahan dari kamu (disimpan
-// di chrome.storage dengan nama "namaCookieTambahan").
-async function ambilNamaSesi() {
-  const data = await chrome.storage.local.get("namaCookieTambahan");
-  return NAMA_COOKIE_SESI.concat(data.namaCookieTambahan || []);
-}
-
-// Menghapus titik di depan domain. Contoh: ".facebook.com" -> "facebook.com"
-function bersihkanDomain(domain) {
-  return domain.replace(/^\./, "");
-}
-
-// Gabungan situs bawaan + situs tambahan yang kamu tambah sendiri lewat popup.
-// Situs tambahan disimpan di chrome.storage dengan nama "situsTambahan".
-async function ambilSitusDipantau() {
-  const data = await chrome.storage.local.get("situsTambahan");
-  return SITUS_PENTING.concat(data.situsTambahan || []);
-}
-
-// Cek apakah domain cookie termasuk situs yang dipantau. Kalau ya, kembalikan nama situsnya.
-async function cariSitusPenting(domain) {
-  const d = bersihkanDomain(domain);
-  const daftar = await ambilSitusDipantau();
-  return daftar.find((situs) => d === situs || d.endsWith("." + situs));
+function kirimNotifikasi(judul, pesan) {
+  chrome.notifications.create({
+    type: "basic",
+    iconUrl: "icon128.png",
+    title: judul,
+    message: pesan,
+  });
 }
 
 // Cek apakah domain ada di daftar putih (situs yang kamu percaya).
-// Daftar putih disimpan di chrome.storage dengan nama "daftarPutih".
 async function dalamDaftarPutih(domain) {
-  const data = await chrome.storage.local.get("daftarPutih");
-  const daftar = data.daftarPutih || [];
-  const d = bersihkanDomain(domain);
-  return daftar.some((situs) => d === situs || d.endsWith("." + situs));
+  return cocokSalahSatu(domain, await ambilDaftarPutih());
+}
+
+// Cek apakah domain cookie termasuk situs yang dipantau.
+// Kalau ya, kembalikan nama situsnya.
+async function cariSitusPenting(domain) {
+  const daftar = await ambilSitusDipantau();
+  return daftar.find((situs) => cocokDomain(domain, situs));
 }
 
 // Cek apakah ada tab yang sedang membuka situs tersebut.
@@ -84,12 +43,49 @@ async function adaTabTerbuka(situs) {
   });
 }
 
-// Simpan peringatan ke penyimpanan ekstensi, lalu tampilkan notifikasi.
-async function simpanPeringatan(cookie, situs) {
+// ---------- Menyimpan peringatan ----------
+
+// Beberapa cookie bisa berubah hampir bersamaan. Supaya penyimpanan tidak
+// saling menimpa, semua penulisan peringatan dibuat antre satu per satu.
+let antrianTulis = Promise.resolve();
+
+function tambahPeringatan(peringatan) {
+  const kerja = antrianTulis.then(() => catatPeringatan(peringatan));
+  antrianTulis = kerja.catch(() => {});
+  return kerja;
+}
+
+// Mengembalikan true kalau peringatan baru dicatat, false kalau sudah ada.
+async function catatPeringatan(peringatan) {
   const data = await chrome.storage.local.get("peringatan");
   const daftar = data.peringatan || [];
 
-  daftar.unshift({
+  // Satu domain tiruan cukup satu peringatan, walau cookie-nya banyak.
+  if (peringatan.jenis === "domain-mirip") {
+    const sudahAda = daftar.some(
+      (p) =>
+        p.jenis === "domain-mirip" &&
+        bersihkanDomain(p.domain) === bersihkanDomain(peringatan.domain)
+    );
+    if (sudahAda) return false;
+  }
+
+  daftar.unshift(peringatan);
+
+  // Simpan maksimal 50 peringatan terakhir supaya tidak menumpuk.
+  const dipangkas = daftar.slice(0, 50);
+  await chrome.storage.local.set({ peringatan: dipangkas });
+
+  // Angka merah di ikon ekstensi
+  await chrome.action.setBadgeText({ text: String(Math.min(dipangkas.length, 99)) });
+  await chrome.action.setBadgeBackgroundColor({ color: "#d93025" });
+  return true;
+}
+
+// Peringatan jenis "sesi": cookie sesi berubah padahal situsnya tidak dibuka.
+async function simpanPeringatan(cookie, situs) {
+  const baru = await tambahPeringatan({
+    jenis: "sesi",
     waktu: Date.now(),
     situs: situs,
     domain: cookie.domain,
@@ -97,25 +93,42 @@ async function simpanPeringatan(cookie, situs) {
     path: cookie.path,
     secure: cookie.secure,
     storeId: cookie.storeId,
-    alasan:
-      "Cookie sesi berubah padahal kamu tidak sedang membuka " + situs,
+    alasan: "Cookie sesi berubah padahal kamu tidak sedang membuka " + situs,
   });
 
-  // Simpan maksimal 50 peringatan terakhir supaya tidak menumpuk.
-  await chrome.storage.local.set({ peringatan: daftar.slice(0, 50) });
-
-  // Angka merah di ikon ekstensi
-  await chrome.action.setBadgeText({ text: String(Math.min(daftar.length, 99)) });
-  await chrome.action.setBadgeBackgroundColor({ color: "#d93025" });
-
-  chrome.notifications.create({
-    type: "basic",
-    iconUrl: "icon128.png",
-    title: "Cookie mencurigakan: " + situs,
-    message:
-      "Cookie sesi '" + cookie.name + "' berubah tanpa kamu membuka situs ini. Buka ekstensi untuk memeriksa.",
-  });
+  if (baru) {
+    kirimNotifikasi(
+      "Cookie mencurigakan: " + situs,
+      "Cookie sesi '" + cookie.name + "' berubah tanpa kamu membuka situs ini. Buka ekstensi untuk memeriksa."
+    );
+  }
 }
+
+// Peringatan jenis "domain-mirip": domain yang meniru situs yang dipantau.
+async function simpanPeringatanDomain(cookie, mirip) {
+  const domain = bersihkanDomain(cookie.domain);
+  const baru = await tambahPeringatan({
+    jenis: "domain-mirip",
+    waktu: Date.now(),
+    situs: domain,
+    ditiru: mirip.ditiru,
+    domain: cookie.domain,
+    nama: cookie.name,
+    path: cookie.path,
+    secure: cookie.secure,
+    storeId: cookie.storeId,
+    alasan: "Domain ini " + mirip.alasan + " (kemungkinan situs tiruan)",
+  });
+
+  if (baru) {
+    kirimNotifikasi(
+      "Domain mencurigakan: " + domain,
+      "Domain ini " + mirip.alasan + " dan baru menyimpan cookie. Buka ekstensi untuk memeriksa."
+    );
+  }
+}
+
+// ---------- Pemantauan cookies ----------
 
 // Ini bagian utama: dipanggil setiap kali ada cookie yang berubah di browser.
 chrome.cookies.onChanged.addListener(async (info) => {
@@ -124,18 +137,25 @@ chrome.cookies.onChanged.addListener(async (info) => {
 
   const cookie = info.cookie;
 
-  // 1) Apakah ini cookie sesi?
-  const namaSesi = await ambilNamaSesi();
-  if (!namaSesi.includes(cookie.name.toLowerCase())) return;
-
-  // 2) Apakah ini milik situs penting?
-  const situs = await cariSitusPenting(cookie.domain);
-  if (!situs) return;
-
-  // 2b) Kalau situs ada di daftar putih, abaikan.
+  // Situs yang sudah kamu percaya (daftar putih) selalu dilewati.
   if (await dalamDaftarPutih(cookie.domain)) return;
 
-  // 3) Kalau kamu sedang membuka situs itu, perubahan cookie wajar (misalnya login).
+  // Pemeriksaan A: apakah domain ini meniru situs yang dipantau?
+  const dipantau = await ambilSitusDipantau();
+  const mirip = periksaDomainMirip(cookie.domain, dipantau);
+  if (mirip) {
+    await simpanPeringatanDomain(cookie, mirip);
+    return;
+  }
+
+  // Pemeriksaan B: apakah ini cookie sesi dari situs yang dipantau?
+  const situs = dipantau.find((s) => cocokDomain(cookie.domain, s));
+  if (!situs) return;
+
+  const namaSesi = namaSesiUntuk(situs, await ambilPengaturanNama());
+  if (!namaSesi.includes(cookie.name.toLowerCase())) return;
+
+  // Kalau kamu sedang membuka situs itu, perubahan cookie wajar (misalnya login).
   if (await adaTabTerbuka(situs)) return;
 
   // Selain itu: mencurigakan! Catat dan beri peringatan.
@@ -156,14 +176,12 @@ async function periksaEkstensiBaru(info) {
   const hasil = periksaEkstensi(info);
   if (hasil.alasan.length === 0) return;
 
-  chrome.notifications.create({
-    type: "basic",
-    iconUrl: "icon128.png",
-    title: hasil.tinggi
+  kirimNotifikasi(
+    hasil.tinggi
       ? "Ekstensi berisiko tinggi terdeteksi"
       : "Ekstensi berizin cookies terdeteksi",
-    message: info.name + ": " + hasil.alasan.join("; ") + ". Buka Pemantau Cookies untuk memeriksanya.",
-  });
+    info.name + ": " + hasil.alasan.join("; ") + ". Buka Pemantau Cookies untuk memeriksanya."
+  );
 }
 
 chrome.management.onInstalled.addListener(periksaEkstensiBaru);
@@ -175,14 +193,6 @@ chrome.management.onEnabled.addListener(periksaEkstensiBaru);
 // Pengaturannya (aktif/tidak dan jarak hari) disimpan dengan nama "pengingat".
 
 const NAMA_ALARM = "pengingat-aktivitas-login";
-
-async function ambilPengingat() {
-  const data = await chrome.storage.local.get("pengingat");
-  const p = Object.assign({ aktif: false, hari: 7 }, data.pengingat || {});
-  // Jaga supaya jarak hari wajar (1 sampai 90).
-  p.hari = Math.max(1, Math.min(90, Number(p.hari) || 7));
-  return p;
-}
 
 // Menyiapkan alarm sesuai pengaturan.
 // buatUlang = false: kalau alarm sudah ada, biarkan (supaya hitungan hari tidak
@@ -213,15 +223,30 @@ chrome.storage.onChanged.addListener((perubahan, area) => {
   if (area === "local" && perubahan.pengingat) aturAlarm(true);
 });
 
-// Saat alarm berbunyi: tampilkan notifikasi.
+// Saat alarm berbunyi: sebutkan situs yang belum kamu cek dalam beberapa hari ini.
+// Kalau semuanya sudah dicek, tidak ada notifikasi (supaya tidak mengganggu).
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== NAMA_ALARM) return;
+
   const p = await ambilPengingat();
-  chrome.notifications.create({
-    type: "basic",
-    iconUrl: "icon128.png",
-    title: "Waktunya cek aktivitas login",
-    message:
-      "Sudah " + p.hari + " hari. Buka Pemantau Cookies, bagian 'Periksa aktivitas login', lalu cari perangkat atau lokasi yang tidak kamu kenal.",
-  });
+  const [halaman, dipantau, terakhir] = await Promise.all([
+    ambilHalamanSitus(),
+    ambilSitusDipantau(),
+    ambilTerakhirCek(),
+  ]);
+
+  const kelompok = kelompokkanHalaman(halaman, dipantau);
+  const terlambat = kelompokTerlambat(kelompok, terakhir, p.hari, Date.now());
+  if (terlambat.length === 0) return;
+
+  const nama = terlambat.map(([url, daftarSitus]) => daftarSitus.join(" / "));
+  const tampil =
+    nama.slice(0, 3).join(", ") +
+    (nama.length > 3 ? " dan " + (nama.length - 3) + " lainnya" : "");
+
+  kirimNotifikasi(
+    "Waktunya cek aktivitas login",
+    "Belum kamu cek dalam " + p.hari + " hari: " + tampil +
+      ". Buka Pemantau Cookies, bagian 'Periksa aktivitas login'."
+  );
 });

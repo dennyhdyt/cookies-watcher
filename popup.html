@@ -16,7 +16,7 @@
 
     <section>
       <h2>Pemindaian cookies</h2>
-      <p class="info">Mencari cookies sesi dengan pengaturan keamanan lemah.</p>
+      <p class="info">Mencari domain yang meniru situs yang dipantau, dan cookies sesi dengan pengaturan keamanan lemah.</p>
       <button id="tombolPindai">Pindai sekarang</button>
       <div id="hasilPindai"></div>
     </section>
@@ -32,6 +32,7 @@
       <h2>Periksa aktivitas login</h2>
       <p class="info">Satu-satunya cara melihat apakah akunmu dipakai di perangkat lain adalah lewat halaman di bawah. Cari perangkat atau lokasi yang tidak kamu kenal, lalu keluarkan dari sana.</p>
       <div id="daftarAktivitas"></div>
+      <div id="situsTanpaTautan" class="info"></div>
       <div class="baris">
         <label>
           <input type="checkbox" id="centangPengingat" />
@@ -45,16 +46,20 @@
           <option value="30">30</option>
         </select>
         <span>hari</span>
+        <button id="tombolTesNotif" class="kecil">Tes notifikasi</button>
       </div>
       <div id="pesanPengingat" class="info"></div>
     </section>
 
     <section>
       <h2>Situs yang dipantau</h2>
-      <p class="info">Peringatan hanya muncul untuk situs di daftar ini. Kamu bisa menambah situs sendiri.</p>
+      <p class="info">Peringatan hanya muncul untuk situs di daftar ini. Tautan aktivitas login boleh dikosongkan; isi kalau situsnya punya halaman perangkat yang sedang masuk.</p>
       <div class="baris">
-        <input id="inputDipantau" type="text" placeholder="contoh: tokopedia.com" />
-        <button id="tombolTambahDipantau">Tambah</button>
+        <input id="inputDipantau" type="text" placeholder="situs, contoh: tokopedia.com" />
+      </div>
+      <div class="baris">
+        <input id="inputTautan" type="text" placeholder="tautan aktivitas login (opsional)" />
+        <button id="tombolTambahDipantau">Simpan</button>
       </div>
       <div id="pesanDipantau" class="info"></div>
       <div id="daftarDipantau"></div>
@@ -62,9 +67,10 @@
 
     <section>
       <h2>Nama cookie sesi</h2>
-      <p class="info">Cookie dengan nama ini dianggap cookie sesi login. Nama yang umum sudah termasuk; tambahkan nama lain kalau situsmu memakai nama berbeda.</p>
+      <p class="info">Cookie dengan nama ini dianggap cookie sesi login. Nama yang umum sudah termasuk. Pilih "Semua situs", atau satu situs saja kalau namanya khusus untuk situs itu.</p>
       <div class="baris">
-        <input id="inputNamaSesi" type="text" placeholder="contoh: nama_cookie_sesi" />
+        <select id="pilihSitusNama"></select>
+        <input id="inputNamaSesi" type="text" placeholder="nama_cookie_sesi" />
         <button id="tombolTambahNamaSesi">Tambah</button>
       </div>
       <div id="pesanNamaSesi" class="info"></div>
@@ -88,6 +94,7 @@
       "keluar dari semua perangkat" di situs tersebut.
     </section>
 
+    <script src="umum.js"></script>
     <script src="ekstensi.js"></script>
     <script src="popup.js"></script>
   </body>

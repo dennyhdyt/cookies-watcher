@@ -26,6 +26,8 @@ section {
   color: #5f6368;
 }
 
+/* ---------- Kotak peringatan / hasil ---------- */
+
 .item {
   border: 1px solid #dadce0;
   border-radius: 6px;
@@ -48,6 +50,12 @@ section {
   background: #fce8e6;
 }
 
+.item button {
+  margin-bottom: 4px;
+}
+
+/* ---------- Tombol ---------- */
+
 button {
   cursor: pointer;
   border: none;
@@ -67,41 +75,22 @@ button.kecil {
   font-size: 11px;
 }
 
-.baris {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-input[type="text"] {
-  flex: 1;
-  padding: 6px;
-  border: 1px solid #dadce0;
-  border-radius: 4px;
-}
-
 button.percaya {
   background: #188038;
 }
 
-.chip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid #dadce0;
-  border-radius: 6px;
-  padding: 4px 8px;
-  margin-bottom: 4px;
+button.keamanan {
+  background: #f9ab00;
+  color: #202124;
 }
 
-.chip button {
-  background: #5f6368;
-  padding: 3px 8px;
-  font-size: 11px;
-}
+/* ---------- Formulir ---------- */
 
 .baris {
+  display: flex;
+  gap: 6px;
   align-items: center;
+  margin-bottom: 6px;
 }
 
 .baris label {
@@ -110,17 +99,54 @@ button.percaya {
   gap: 4px;
 }
 
-select {
-  padding: 4px;
+input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 6px;
   border: 1px solid #dadce0;
   border-radius: 4px;
 }
 
-.item button {
+select {
+  padding: 4px;
+  border: 1px solid #dadce0;
+  border-radius: 4px;
+  max-width: 120px;
+}
+
+/* ---------- Baris daftar (chip) ---------- */
+
+.chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  padding: 4px 8px;
   margin-bottom: 4px;
 }
 
-button.keamanan {
+.chip .kiri {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  word-break: break-all;
+}
+
+.chip .aksi {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.chip button {
+  background: #5f6368;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.chip button.keamanan {
   background: #f9ab00;
   color: #202124;
 }
@@ -128,6 +154,10 @@ button.keamanan {
 .bawaan {
   color: #5f6368;
   font-size: 11px;
+}
+
+.lewat {
+  color: #d93025;
 }
 
 .tips {

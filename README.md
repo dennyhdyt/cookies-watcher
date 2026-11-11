@@ -18,21 +18,24 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | File | Fungsi |
 |------|--------|
 | `manifest.json` | "KTP" ekstensi: nama, izin yang diminta, file yang dipakai |
-| `background.js` | Pemantau di latar belakang. Mendeteksi cookie sesi yang berubah saat situsnya tidak sedang dibuka |
+| `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, dan pengingat berkala |
 | `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik |
+| `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
-| `popup.js` | Logika tampilan: daftar peringatan, pemindaian, tombol hapus |
+| `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, aktivitas login, daftar putih |
 
 ## Cara deteksi saat ini
 
 - **Peringatan:** cookie sesi di situs penting (Facebook, Google, dll.) dibuat atau diubah padahal tidak ada tab yang membuka situs itu.
-- **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar.
+- **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar; juga domain yang meniru situs yang dipantau.
+- **Domain mirip:** cookie dari domain yang meniru situs yang dipantau (misalnya `faceb00k.com`, `facebok.com`, `facebook-login.com`, `facebook.com.evil.net`) langsung memicu peringatan, sekali per domain, dan muncul di pemindaian. Cookie pelacak/iklan biasa sengaja **tidak** ditandai, karena jumlahnya sangat banyak dan umumnya bukan pencurian. Domain resmi seperti `google.co.id` atau `googleapis.com` dikenali sebagai aman.
 
 - **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang membuat Chrome/Edge menampilkan peringatan "mengelola ekstensi" saat memasang.
-- **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Ada juga pengingat berkala (mati secara bawaan): centang "Ingatkan saya setiap N hari" dan notifikasi akan muncul sesuai jaraknya. Pengingat memakai izin `alarms`.
-- **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri lewat popup. Catatan: pemantauan memakai daftar nama cookie sesi yang umum, jadi untuk situs yang memakai nama berbeda, tambahkan namanya di bagian "Nama cookie sesi".
-- **Nama cookie sesi:** tambahkan nama cookie sesi sendiri (berlaku untuk pemantauan dan pemindaian). Namanya bisa dicari lewat DevTools: F12, tab Application, Cookies.
-- **Keluar dari semua perangkat:** setiap peringatan punya tombol yang membuka halaman sesi/keamanan situs terkait (Facebook, Instagram, Google/YouTube, X, LinkedIn, GitHub). Alamat halaman bisa berubah kalau situsnya mengubah pengaturan.
+- **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Tiap baris mencatat kapan terakhir dicek (merah kalau belum pernah atau sudah lewat dari jarak pengingat). Tombol **Buka** dan **Sudah dicek** sama-sama mencatat waktu; "Buka" dianggap pengecekan, jadi pastikan kamu benar-benar melihat daftar perangkatnya.
+- **Pengingat berkala:** mati secara bawaan. Centang "Ingatkan saya setiap N hari"; notifikasi hanya muncul kalau ada situs yang belum dicek dalam N hari terakhir, dan menyebut situs mana saja. Tombol **Tes notifikasi** menampilkan satu notifikasi contoh untuk memastikan notifikasi tidak diblokir. Pengingat memakai izin `alarms`.
+- **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri, dengan tautan halaman aktivitas login yang opsional (harus https; kalau mengarah ke host lain, kamu diminta mengonfirmasi dulu). Menyimpan ulang situs yang sama memperbarui tautannya. Menghapus situs tambahan juga membersihkan tautan, nama cookie, dan catatan cek miliknya.
+- **Nama cookie sesi:** tambahkan nama cookie sesi sendiri, untuk **semua situs** atau **satu situs saja** (pilih lewat kotak pilihan). Berlaku untuk pemantauan dan pemindaian. Namanya bisa dicari lewat DevTools: F12, tab Application, Cookies.
+- **Keluar dari semua perangkat:** peringatan cookie sesi punya tombol yang membuka halaman sesi/keamanan situs terkait (Facebook, Instagram, Google/YouTube, X, LinkedIn, GitHub, dan situs tambahan yang kamu beri tautan). Alamat halaman bisa berubah kalau situsnya mengubah pengaturan.
 - **Daftar putih:** situs yang kamu percaya tidak memicu peringatan dan tidak muncul di hasil pemindaian. Tambahkan lewat kolom input di popup, atau tombol "Percayai situs ini" pada peringatan. Subdomain ikut dihitung (menambah `google.com` juga mencakup `accounts.google.com`).
 
 Ini heuristik (tebakan berdasarkan tanda-tanda), bukan bukti pasti pembajakan, jadi
@@ -43,6 +46,8 @@ kadang bisa salah peringatan.
 - Ekstensi browser **tidak bisa melihat apakah cookie dipakai di perangkat lain**. Itu hanya terlihat oleh server situs, lewat halaman "aktivitas login" atau "perangkat yang masuk". Tombol "Keluar dari semua perangkat" di peringatan membuka halaman itu.
 - Pemeriksaan ekstensi hanya membaca izin yang tercantum, bukan perilaku sebenarnya. Ekstensi tanpa izin cookies masih bisa membaca cookie biasa lewat skrip di halaman, jadi ini bukan jaminan keamanan penuh.
 - Ekstensi pribadi yang dipasang lewat Load unpacked (seperti ekstensi ini) tidak diperiksa terhadap dirinya sendiri.
+- Deteksi domain mirip adalah tebakan dari bentuk nama domain. Ia belum mengenali nama merek yang persis sama di akhiran tidak biasa (misalnya `google.xyz`), dan daftar domain resmi yang dikecualikan hanya sebagian; kalau ada situs sah yang salah ditandai, masukkan ke daftar putih.
+- Ekstensi tidak punya cara mengetahui situs induk sebuah cookie, jadi cookie pihak ketiga biasa (iklan, pelacak) tidak dinilai. Yang dinilai adalah apakah domainnya meniru situs yang kamu pantau.
 
 ## Penting
 
@@ -51,7 +56,6 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 
 ## Ide pengembangan berikutnya
 
-1. Deteksi domain pihak ketiga yang mencurigakan
-2. Nama cookie sesi per situs (saat ini berlaku untuk semua situs)
-3. Tautan "keluar dari semua perangkat" untuk situs tambahan
-4. Mencatat kapan terakhir kamu mengecek aktivitas login tiap situs
+1. Sinyal domain tambahan: alamat IP publik, domain punycode (IDN), dan nama merek persis di akhiran tidak biasa
+2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
+3. Tombol untuk memicu pengingat sekarang juga, bukan hanya menunggu jaraknya

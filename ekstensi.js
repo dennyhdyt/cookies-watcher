@@ -29,15 +29,15 @@ function periksaEkstensi(info) {
 
   if (izin.includes("cookies")) {
     if (semuaSitus) {
-      alasan.push("bisa membaca dan mengubah cookies di SEMUA situs");
+      alasan.push(tr("e.semua"));
       tinggi = true;
     } else {
-      alasan.push("punya izin cookies (untuk situs tertentu)");
+      alasan.push(tr("e.tertentu"));
     }
   }
 
   if ((izin.includes("webRequest") || izin.includes("webRequestBlocking")) && semuaSitus) {
-    alasan.push("bisa melihat semua lalu lintas web, termasuk cookie yang terkirim");
+    alasan.push(tr("e.lalulintas"));
     tinggi = true;
   }
 

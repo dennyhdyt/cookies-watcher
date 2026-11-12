@@ -6,35 +6,40 @@
     <title>Pemantau Cookies</title>
   </head>
   <body>
-    <h1>Pemantau Cookies</h1>
+    <header class="kepala">
+      <h1>Pemantau Cookies</h1>
+      <div class="bahasa" role="group" data-i18n-aria="bahasa.label">
+        <button id="bahasa-id" data-bahasa="id" aria-pressed="true">ID</button>
+        <button id="bahasa-en" data-bahasa="en" aria-pressed="false">EN</button>
+      </div>
+    </header>
 
-    <nav class="tab" role="tablist" aria-label="Bagian">
-      <button role="tab" id="tab-peringatan" data-panel="panel-peringatan" aria-selected="true">Peringatan</button>
-      <button role="tab" id="tab-pindai" data-panel="panel-pindai" aria-selected="false">Pemindaian</button>
-      <button role="tab" id="tab-ekstensi" data-panel="panel-ekstensi" aria-selected="false">Ekstensi</button>
-      <button role="tab" id="tab-login" data-panel="panel-login" aria-selected="false">Login</button>
-      <button role="tab" id="tab-pengaturan" data-panel="panel-pengaturan" aria-selected="false">Pengaturan</button>
+    <nav class="tab" role="tablist" data-i18n-aria="tab.aria">
+      <button role="tab" id="tab-peringatan" data-panel="panel-peringatan" aria-selected="true"><span data-i18n="tab.peringatan"></span></button>
+      <button role="tab" id="tab-pindai" data-panel="panel-pindai" aria-selected="false"><span data-i18n="tab.pindai"></span></button>
+      <button role="tab" id="tab-ekstensi" data-panel="panel-ekstensi" aria-selected="false"><span data-i18n="tab.ekstensi"></span></button>
+      <button role="tab" id="tab-login" data-panel="panel-login" aria-selected="false"><span data-i18n="tab.login"></span></button>
+      <button role="tab" id="tab-pengaturan" data-panel="panel-pengaturan" aria-selected="false"><span data-i18n="tab.pengaturan"></span></button>
     </nav>
 
     <div class="panel" id="panel-peringatan" role="tabpanel" aria-labelledby="tab-peringatan">
     <section>
-      <h2>Peringatan</h2>
+      <h2 data-i18n="h.peringatan"></h2>
       <div id="peringatan"></div>
-      <button id="bersihkanPeringatan" class="kecil">Bersihkan semua peringatan</button>
+      <button id="bersihkanPeringatan" class="kecil" data-i18n="btn.bersihkan"></button>
     </section>
 
     <section class="tips">
-      <strong>Kalau akunmu terasa dibajak:</strong> menghapus cookie di sini
-      saja tidak cukup. Segera ganti password dan pilih
-      "keluar dari semua perangkat" di situs tersebut.
+      <strong data-i18n="tips.judul"></strong>
+      <span data-i18n="tips.isi"></span>
     </section>
     </div>
 
     <div class="panel" id="panel-pindai" role="tabpanel" aria-labelledby="tab-pindai" hidden>
     <section>
-      <h2>Pemindaian cookies</h2>
-      <p class="info">Mencari domain yang meniru situs yang dipantau, domain yang perlu diperhatikan (alamat IP publik, domain internasional), dan cookies sesi dengan pengaturan keamanan lemah.</p>
-      <button id="tombolPindai">Pindai sekarang</button>
+      <h2 data-i18n="pindai.judul"></h2>
+      <p class="info" data-i18n="pindai.info"></p>
+      <button id="tombolPindai" data-i18n="pindai.tombol"></button>
       <div id="hasilPindai"></div>
     </section>
 
@@ -42,8 +47,8 @@
 
     <div class="panel" id="panel-ekstensi" role="tabpanel" aria-labelledby="tab-ekstensi" hidden>
     <section>
-      <h2>Ekstensi berizin cookies</h2>
-      <p class="info">Ekstensi lain yang bisa mengambil cookies atau melihat lalu lintas web. Nonaktifkan atau hapus yang tidak kamu kenal.</p>
+      <h2 data-i18n="ekstensi.judul"></h2>
+      <p class="info" data-i18n="ekstensi.info"></p>
       <div id="izinEkstensi"></div>
       <div id="daftarEkstensi"></div>
       <div id="daftarEkstensiTepercaya"></div>
@@ -53,14 +58,14 @@
 
     <div class="panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login" hidden>
     <section>
-      <h2>Periksa aktivitas login</h2>
-      <p class="info">Satu-satunya cara melihat apakah akunmu dipakai di perangkat lain adalah lewat halaman di bawah. Cari perangkat atau lokasi yang tidak kamu kenal, lalu keluarkan dari sana.</p>
+      <h2 data-i18n="login.judul"></h2>
+      <p class="info" data-i18n="login.info"></p>
       <div id="daftarAktivitas"></div>
       <div id="situsTanpaTautan" class="info"></div>
       <div class="baris">
         <label>
           <input type="checkbox" id="centangPengingat" />
-          Ingatkan saya setiap
+          <span data-i18n="login.ingatkan"></span>
         </label>
         <select id="pilihHari">
           <option value="1">1</option>
@@ -69,8 +74,8 @@
           <option value="14">14</option>
           <option value="30">30</option>
         </select>
-        <span>hari</span>
-        <button id="tombolTesNotif" class="kecil">Tes notifikasi</button>
+        <span data-i18n="login.hari"></span>
+        <button id="tombolTesNotif" class="kecil" data-i18n="login.tesnotif"></button>
       </div>
       <div id="pesanPengingat" class="info"></div>
     </section>
@@ -79,14 +84,14 @@
 
     <div class="panel" id="panel-pengaturan" role="tabpanel" aria-labelledby="tab-pengaturan" hidden>
     <details>
-      <summary>Situs yang dipantau</summary>
-      <p class="info">Peringatan hanya muncul untuk situs di daftar ini. Tautan aktivitas login boleh dikosongkan; isi kalau situsnya punya halaman perangkat yang sedang masuk.</p>
+      <summary data-i18n="set.dipantau"></summary>
+      <p class="info" data-i18n="set.dipantau.info"></p>
       <div class="baris">
-        <input id="inputDipantau" type="text" placeholder="situs, contoh: tokopedia.com" />
+        <input id="inputDipantau" type="text" data-i18n-placeholder="set.dipantau.situs" />
       </div>
       <div class="baris">
-        <input id="inputTautan" type="text" placeholder="tautan aktivitas login (opsional)" />
-        <button id="tombolTambahDipantau">Simpan</button>
+        <input id="inputTautan" type="text" data-i18n-placeholder="set.dipantau.tautan" />
+        <button id="tombolTambahDipantau" data-i18n="btn.simpan"></button>
       </div>
       <div id="pesanDipantau" class="info"></div>
       <div id="daftarDipantau"></div>
@@ -94,12 +99,12 @@
     </details>
 
     <details>
-      <summary>Nama cookie sesi</summary>
-      <p class="info">Cookie dengan nama ini dianggap cookie sesi login. Nama yang umum sudah termasuk. Pilih "Semua situs", atau satu situs saja kalau namanya khusus untuk situs itu.</p>
+      <summary data-i18n="set.nama"></summary>
+      <p class="info" data-i18n="set.nama.info"></p>
       <div class="baris">
         <select id="pilihSitusNama"></select>
-        <input id="inputNamaSesi" type="text" placeholder="nama_cookie_sesi" />
-        <button id="tombolTambahNamaSesi">Tambah</button>
+        <input id="inputNamaSesi" type="text" data-i18n-placeholder="set.nama.input" />
+        <button id="tombolTambahNamaSesi" data-i18n="btn.tambah"></button>
       </div>
       <div id="pesanNamaSesi" class="info"></div>
       <div id="daftarNamaSesi"></div>
@@ -107,17 +112,18 @@
     </details>
 
     <details>
-      <summary>Daftar putih</summary>
-      <p class="info">Situs di sini tidak akan memicu peringatan dan tidak muncul di hasil pemindaian.</p>
+      <summary data-i18n="set.putih"></summary>
+      <p class="info" data-i18n="set.putih.info"></p>
       <div class="baris">
-        <input id="inputSitus" type="text" placeholder="contoh: github.com" />
-        <button id="tombolTambah">Tambah</button>
+        <input id="inputSitus" type="text" data-i18n-placeholder="set.putih.input" />
+        <button id="tombolTambah" data-i18n="btn.tambah"></button>
       </div>
       <div id="pesanDaftarPutih" class="info"></div>
       <div id="daftarPutih"></div>
     </details>
     </div>
 
+    <script src="bahasa.js"></script>
     <script src="umum.js"></script>
     <script src="ekstensi.js"></script>
     <script src="popup.js"></script>

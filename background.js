@@ -5,7 +5,8 @@
 // ============================================================
 
 // Memuat data dan fungsi bersama (lihat umum.js dan ekstensi.js).
-importScripts("umum.js", "ekstensi.js");
+importScripts("bahasa.js", "umum.js", "ekstensi.js");
+muatBahasa();
 
 // ---------- Fungsi bantu ----------
 
@@ -84,6 +85,7 @@ async function catatPeringatan(peringatan) {
 
 // Peringatan jenis "sesi": cookie sesi berubah padahal situsnya tidak dibuka.
 async function simpanPeringatan(cookie, situs) {
+  await muatBahasa();
   const baru = await tambahPeringatan({
     jenis: "sesi",
     waktu: Date.now(),
@@ -93,19 +95,20 @@ async function simpanPeringatan(cookie, situs) {
     path: cookie.path,
     secure: cookie.secure,
     storeId: cookie.storeId,
-    alasan: "Cookie sesi berubah padahal kamu tidak sedang membuka " + situs,
+    alasan: tr("b.sesi.alasan", { s: situs }),
   });
 
   if (baru) {
     kirimNotifikasi(
-      "Cookie mencurigakan: " + situs,
-      "Cookie sesi '" + cookie.name + "' berubah tanpa kamu membuka situs ini. Buka ekstensi untuk memeriksa."
+      tr("b.sesi.judul", { s: situs }),
+      tr("b.sesi.isi", { n: cookie.name })
     );
   }
 }
 
 // Peringatan jenis "domain-mirip": domain yang meniru situs yang dipantau.
 async function simpanPeringatanDomain(cookie, mirip) {
+  await muatBahasa();
   const domain = bersihkanDomain(cookie.domain);
   const baru = await tambahPeringatan({
     jenis: "domain-mirip",
@@ -117,13 +120,13 @@ async function simpanPeringatanDomain(cookie, mirip) {
     path: cookie.path,
     secure: cookie.secure,
     storeId: cookie.storeId,
-    alasan: "Domain ini " + mirip.alasan + " (kemungkinan situs tiruan)",
+    alasan: tr("b.dom.alasan", { a: mirip.alasan }),
   });
 
   if (baru) {
     kirimNotifikasi(
-      "Domain mencurigakan: " + domain,
-      "Domain ini " + mirip.alasan + " dan baru menyimpan cookie. Buka ekstensi untuk memeriksa."
+      tr("p.domCuriga", { d: domain }),
+      tr("b.dom.isi", { a: mirip.alasan })
     );
   }
 }
@@ -142,6 +145,7 @@ chrome.cookies.onChanged.addListener(async (info) => {
 
   // Pemeriksaan A: apakah domain ini meniru situs yang dipantau?
   const dipantau = await ambilSitusDipantau();
+  await muatBahasa(); // alasan domain mirip ditulis dalam bahasa pilihan
   const mirip = periksaDomainMirip(cookie.domain, dipantau);
   if (mirip) {
     await simpanPeringatanDomain(cookie, mirip);
@@ -173,14 +177,13 @@ async function periksaEkstensiBaru(info) {
   const tepercaya = await ambilEkstensiTepercaya();
   if (tepercaya.some((t) => t.id === info.id)) return;
 
+  await muatBahasa();
   const hasil = periksaEkstensi(info);
   if (hasil.alasan.length === 0) return;
 
   kirimNotifikasi(
-    hasil.tinggi
-      ? "Ekstensi berisiko tinggi terdeteksi"
-      : "Ekstensi berizin cookies terdeteksi",
-    info.name + ": " + hasil.alasan.join("; ") + ". Buka Pemantau Cookies untuk memeriksanya."
+    hasil.tinggi ? tr("b.ext.tinggi") : tr("b.ext.sedang"),
+    tr("b.ext.isi", { n: info.name, a: hasil.alasan.join("; ") })
   );
 }
 
@@ -252,14 +255,14 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const terlambat = kelompokTerlambat(kelompok, terakhir, p.hari, Date.now());
   if (terlambat.length === 0) return;
 
+  await muatBahasa();
   const nama = terlambat.map(([url, daftarSitus]) => daftarSitus.join(" / "));
   const tampil =
     nama.slice(0, 3).join(", ") +
-    (nama.length > 3 ? " dan " + (nama.length - 3) + " lainnya" : "");
+    (nama.length > 3 ? tr("b.ingat.lainnya", { n: nama.length - 3 }) : "");
 
   kirimNotifikasi(
-    "Waktunya cek aktivitas login",
-    "Belum kamu cek dalam " + p.hari + " hari: " + tampil +
-      ". Buka Pemantau Cookies, bagian 'Periksa aktivitas login'."
+    tr("b.ingat.judul"),
+    tr("b.ingat.isi", { h: p.hari, t: tampil })
   );
 });

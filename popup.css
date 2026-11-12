@@ -246,3 +246,41 @@ summary {
   font-size: 14px;
   padding: 8px 0;
 }
+
+/* ---------- Pilihan bahasa ---------- */
+
+.kepala {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kepala h1 {
+  margin: 0;
+}
+
+.bahasa {
+  display: flex;
+  border: 1px solid #dadce0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bahasa button {
+  background: white;
+  color: #5f6368;
+  border-radius: 0;
+  padding: 3px 9px;
+  font-size: 11px;
+}
+
+.bahasa button + button {
+  border-left: 1px solid #dadce0;
+}
+
+.bahasa button[aria-pressed="true"] {
+  background: #1a73e8;
+  color: white;
+  font-weight: bold;
+}

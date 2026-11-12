@@ -20,12 +20,21 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `manifest.json` | "KTP" ekstensi: nama, izin yang diminta, file yang dipakai |
 | `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, dan pengingat berkala |
 | `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik, dibagi dalam 5 tab: Peringatan, Pemindaian, Ekstensi, Login, Pengaturan (angka merah di tab Peringatan = jumlah peringatan) |
+| `bahasa.js` | Kamus teks Indonesia dan Inggris, plus pemilihan bahasa. Dimuat paling awal oleh `background.js` dan popup |
 | `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
 | `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, aktivitas login, daftar putih |
 | `periksa-keamanan.js` | Alat bantu: `node periksa-keamanan.js` memeriksa izin dan melarang jaringan, eval, pembacaan nilai cookie, dll. |
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
+
+## Bahasa
+
+Popup punya tombol **ID | EN** di pojok kanan atas. Pilihannya tersimpan di browser dan juga dipakai untuk
+notifikasi. Bawaannya Indonesia. Peringatan yang sudah tercatat tetap memakai bahasa saat peringatan itu dibuat.
+
+Menambah bahasa baru: salin satu blok bahasa di `bahasa.js`, terjemahkan, lalu tambahkan kodenya ke `DAFTAR_BAHASA`
+dan `LOCALE`, dan satu tombol di `popup.html`.
 
 ## Cara deteksi saat ini
 

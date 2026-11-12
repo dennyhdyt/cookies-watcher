@@ -235,13 +235,13 @@ function periksaDomainPerhatian(domain) {
   const alasan = [];
 
   if (ipPublik(d)) {
-    alasan.push("alamat IP publik, bukan nama situs (situs resmi jarang memakai IP untuk login)");
+    alasan.push(tr("a.ip"));
   }
 
   const bagian = d.split(".");
   if (bagian.some((l) => bacaLabelIdn(l))) {
     const terbaca = bagian.map((l) => bacaLabelIdn(l) || l).join(".");
-    alasan.push("domain internasional (punycode), terbaca sebagai '" + terbaca + "'. Pastikan kamu mengenalnya");
+    alasan.push(tr("a.punycode", { t: terbaca }));
   }
 
   return alasan.length > 0 ? { alasan: alasan.join("; ") } : null;
@@ -280,7 +280,7 @@ function periksaDomainMirip(domain, daftarSitus) {
       if (kerangka === merek || (kerangka.length >= 5 && jarakEdit(kerangka, merek) === 1)) {
         return {
           ditiru: situs,
-          alasan: "memakai huruf non-Latin yang menyerupai nama '" + merek + "' (serangan homograf)",
+          alasan: tr("m.homograf", { m: merek }),
         };
       }
     }
@@ -288,7 +288,7 @@ function periksaDomainMirip(domain, daftarSitus) {
     if (campuranHuruf(asli)) {
       return {
         ditiru: null,
-        alasan: "mencampur huruf Latin dengan huruf Kiril/Yunani dalam satu nama (ciri serangan homograf)",
+        alasan: tr("m.campuran"),
       };
     }
   }
@@ -301,7 +301,7 @@ function periksaDomainMirip(domain, daftarSitus) {
     //    Contoh: "google.com.evil.net". Versi negara seperti "google.com.sg" wajar.
     const polaNegara = new RegExp("(^|\\.)" + situs.replace(/\./g, "\\.") + "\\.[a-z]{2}$");
     if (d.includes(situs) && !polaNegara.test(d)) {
-      return { ditiru: situs, alasan: "memuat alamat '" + situs + "' tetapi bukan milik situs itu" };
+      return { ditiru: situs, alasan: tr("m.alamat", { s: situs }) };
     }
 
     for (let i = 0; i < label.length; i++) {
@@ -310,7 +310,7 @@ function periksaDomainMirip(domain, daftarSitus) {
       // 2) Nama merek dipakai sebagai subdomain domain lain. Contoh: "facebook.evil.com"
       if (l === merek) {
         if (i !== idxUtama) {
-          return { ditiru: situs, alasan: "memakai nama '" + merek + "' sebagai subdomain dari domain lain" };
+          return { ditiru: situs, alasan: tr("m.subdomain", { m: merek }) };
         }
 
         // 2b) Nama persis sama, tetapi di akhiran yang sering disalahgunakan.
@@ -319,7 +319,7 @@ function periksaDomainMirip(domain, daftarSitus) {
         if (AKHIRAN_SERING_DISALAHGUNAKAN.includes(akhiran)) {
           return {
             ditiru: situs,
-            alasan: "memakai nama persis '" + merek + "' di akhiran ." + akhiran + " yang sering disalahgunakan",
+            alasan: tr("m.akhiran", { m: merek, a: akhiran }),
           };
         }
         continue; // nama sama dengan akhiran lain (google.co.id) wajar
@@ -327,17 +327,17 @@ function periksaDomainMirip(domain, daftarSitus) {
 
       // 3) Huruf diganti angka/simbol. Contoh: "faceb00k"
       if (variasiLeet(l).includes(merek)) {
-        return { ditiru: situs, alasan: "memakai angka/simbol untuk meniru nama '" + merek + "'" };
+        return { ditiru: situs, alasan: tr("m.leet", { m: merek }) };
       }
 
       // 4) Salah ketik yang nyaris sama. Contoh: "facebok", "googel"
       if (l.length >= 5 && jarakEdit(l, merek) === 1) {
-        return { ditiru: situs, alasan: "namanya nyaris sama dengan '" + merek + "'" };
+        return { ditiru: situs, alasan: tr("m.mirip", { m: merek }) };
       }
 
       // 5) Memuat nama merek dengan kata pancingan. Contoh: "facebook-login"
       if (l.includes(merek) && KATA_PENIPUAN.test(l)) {
-        return { ditiru: situs, alasan: "memuat nama '" + merek + "' dengan kata seperti login/verify" };
+        return { ditiru: situs, alasan: tr("m.pancing", { m: merek }) };
       }
     }
   }
@@ -402,11 +402,11 @@ async function catatTerakhirCek(daftarSitus) {
 
 // "belum pernah", "hari ini", "kemarin", "3 hari lalu"
 function waktuRelatif(waktu, sekarang) {
-  if (!waktu) return "belum pernah";
+  if (!waktu) return tr("waktu.belum");
   const hari = Math.floor((sekarang - waktu) / 86400000);
-  if (hari <= 0) return "hari ini";
-  if (hari === 1) return "kemarin";
-  return hari + " hari lalu";
+  if (hari <= 0) return tr("waktu.hariIni");
+  if (hari === 1) return tr("waktu.kemarin");
+  return tr("waktu.hariLalu", { n: hari });
 }
 
 // Mengelompokkan situs yang dipantau berdasarkan alamat halamannya,

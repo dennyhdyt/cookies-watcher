@@ -26,8 +26,8 @@ function buatKosong(teks) {
 // Judul untuk domain yang mencurigakan. "ditiru" kosong kalau tidak jelas meniru siapa.
 function judulDomain(ditiru, domain) {
   return ditiru
-    ? "Domain mirip " + ditiru + ": " + domain
-    : "Domain mencurigakan: " + domain;
+    ? tr("p.domMirip", { d: ditiru, x: domain })
+    : tr("p.domCuriga", { d: domain });
 }
 
 // Membuat satu kotak item di layar.
@@ -147,21 +147,21 @@ async function tampilkanPeringatan() {
   tampilkanJumlahTab(daftar.length);
 
   if (daftar.length === 0) {
-    wadah.append(buatKosong("Belum ada peringatan. Bagus!"));
+    wadah.append(buatKosong(tr("p.kosong")));
     return;
   }
 
   for (const p of daftar) {
-    const waktu = new Date(p.waktu).toLocaleString("id-ID");
+    const waktu = formatWaktu(p.waktu);
     const mirip = p.jenis === "domain-mirip";
 
     const item = mirip
       ? buatItem(
           judulDomain(p.ditiru, p.situs),
           p.alasan + " (" + waktu + ")",
-          "Hapus semua cookie domain ini",
+          tr("p.hapusDom"),
           async () => {
-            if (!confirm("Hapus semua cookie dari " + p.situs + "?")) return;
+            if (!confirm(tr("p.konfDom", { s: p.situs }))) return;
             await hapusSemuaCookieDomain(p.domain);
             await buangPeringatan(p);
           },
@@ -170,9 +170,9 @@ async function tampilkanPeringatan() {
       : buatItem(
           p.situs + " - " + p.nama,
           p.alasan + " (" + waktu + ")",
-          "Hapus cookie ini",
+          tr("p.hapusCk"),
           async () => {
-            if (!confirm("Hapus cookie '" + p.nama + "' dari " + p.situs + "? Kamu mungkin logout dari situs itu.")) return;
+            if (!confirm(tr("p.konfCk", { n: p.nama, s: p.situs }))) return;
             await hapusCookie(p);
             await buangPeringatan(p);
           },
@@ -181,11 +181,11 @@ async function tampilkanPeringatan() {
 
     // Tombol kedua: masukkan situs ini ke daftar putih.
     item.append(
-      buatTombol("Percayai situs ini", "percaya", async () => {
+      buatTombol(tr("p.percaya"), "percaya", async () => {
         const peringatanTambahan = mirip
-          ? "PERHATIAN: domain ini terlihat mencurigakan" + (p.ditiru ? " (meniru " + p.ditiru + ")" : "") + ". "
+          ? tr("p.perhatian") + (p.ditiru ? tr("p.meniru", { x: p.ditiru }) : "") + ". "
           : "";
-        if (!confirm(peringatanTambahan + "Percayai " + p.situs + "? Peringatan dari situs ini tidak akan muncul lagi.")) return;
+        if (!confirm(peringatanTambahan + tr("p.konfPercaya", { s: p.situs }))) return;
         await tambahKeDaftarPutih(p.situs);
       })
     );
@@ -195,7 +195,7 @@ async function tampilkanPeringatan() {
     const tautan = mirip ? null : halaman[p.situs];
     if (tautan) {
       item.append(
-        buatTombol("Keluar dari semua perangkat", "keamanan", async () => {
+        buatTombol(tr("p.keluarSemua"), "keamanan", async () => {
           await catatTerakhirCek([p.situs]);
           chrome.tabs.create({ url: tautan });
           tampilkanAktivitas();
@@ -233,20 +233,20 @@ function periksaRisiko(cookie, namaSesi) {
   if (!namaSesi.includes(cookie.name.toLowerCase())) return alasan;
 
   if (!cookie.httpOnly) {
-    alasan.push("tanpa HttpOnly (bisa dibaca oleh skrip di halaman)");
+    alasan.push(tr("r.httponly"));
   }
   if (!cookie.secure) {
-    alasan.push("tanpa Secure (bisa terkirim lewat koneksi tidak aman)");
+    alasan.push(tr("r.secure"));
   }
   if (cookie.sameSite === "no_restriction") {
-    alasan.push("SameSite longgar (bisa terkirim dari situs lain)");
+    alasan.push(tr("r.samesite"));
   }
   return alasan;
 }
 
 document.getElementById("tombolPindai").addEventListener("click", async () => {
   const wadah = document.getElementById("hasilPindai");
-  wadah.textContent = "Memindai...";
+  wadah.textContent = tr("s.memindai");
 
   const [daftarPutih, dipantau, pengaturan, semuaCookie] = await Promise.all([
     ambilDaftarPutih(),
@@ -293,8 +293,8 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
 
   // Tombol "Percayai" untuk hasil pemindaian: masuk daftar putih lalu barisnya hilang.
   const tombolPercayaiDomain = (dom, item) =>
-    buatTombol("Percayai", "percaya", async () => {
-      if (!confirm("Percayai " + dom + "? Domain ini tidak akan ditandai lagi.")) return;
+    buatTombol(tr("s.percayai"), "percaya", async () => {
+      if (!confirm(tr("s.konfPercaya", { d: dom }))) return;
       await tambahKeDaftarPutih(dom);
       item.remove();
     });
@@ -302,10 +302,10 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
   for (const [dom, catatan] of domainMirip) {
     const item = buatItem(
       judulDomain(catatan.info.ditiru, dom),
-      "Domain ini " + catatan.info.alasan + ". Menyimpan " + catatan.jumlah + " cookie.",
-      "Hapus semua cookie domain ini",
+      tr("s.isiMirip", { a: catatan.info.alasan, n: catatan.jumlah }),
+      tr("p.hapusDom"),
       async () => {
-        if (!confirm("Hapus semua cookie dari " + dom + "?")) return;
+        if (!confirm(tr("p.konfDom", { s: dom }))) return;
         await hapusSemuaCookieDomain(dom);
         item.remove();
       },
@@ -317,11 +317,11 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
 
   for (const [dom, catatan] of domainPerhatian) {
     const item = buatItem(
-      "Perlu diperhatikan: " + dom,
-      "Tanda: " + catatan.alasan + ". Menyimpan " + catatan.jumlah + " cookie.",
-      "Hapus semua cookie domain ini",
+      tr("s.perlu", { d: dom }),
+      tr("s.tanda", { a: catatan.alasan, n: catatan.jumlah }),
+      tr("p.hapusDom"),
       async () => {
-        if (!confirm("Hapus semua cookie dari " + dom + "?")) return;
+        if (!confirm(tr("p.konfDom", { s: dom }))) return;
         await hapusSemuaCookieDomain(dom);
         item.remove();
       },
@@ -336,9 +336,9 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
     const item = buatItem(
       bersihkanDomain(cookie.domain) + " - " + cookie.name,
       alasan.join("; "),
-      "Hapus",
+      tr("s.hapus"),
       async () => {
-        if (!confirm("Hapus cookie '" + cookie.name + "'? Kamu mungkin logout dari situs itu.")) return;
+        if (!confirm(tr("s.konfCk", { n: cookie.name }))) return;
         await hapusCookie(cookie);
         item.remove();
       },
@@ -348,7 +348,7 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
   }
 
   if (domainMirip.size === 0 && domainPerhatian.size === 0 && berisiko.length === 0) {
-    wadah.append(buatKosong("Tidak ada domain mencurigakan atau cookie sesi berisiko ditemukan."));
+    wadah.append(buatKosong(tr("s.kosong")));
   }
 });
 
@@ -375,8 +375,8 @@ async function tampilkanEkstensi() {
     const pesanIzin = document.createElement("div");
     pesanIzin.className = "info";
     izin.append(
-      buatKosong("Pemeriksaan ekstensi belum aktif. Fitur ini butuh izin tambahan untuk melihat daftar ekstensi lain. Izinnya bisa kamu cabut kapan saja."),
-      buatTombol("Aktifkan pemeriksaan ekstensi", "", async () => {
+      buatKosong(tr("x.belumAktif")),
+      buatTombol(tr("x.aktifkan"), "", async () => {
         let diberikan = false;
         try {
           diberikan = await chrome.permissions.request({ permissions: ["management"] });
@@ -386,7 +386,7 @@ async function tampilkanEkstensi() {
         if (diberikan) {
           tampilkanEkstensi();
         } else {
-          pesanIzin.textContent = "Izin tidak diberikan, jadi pemeriksaan ekstensi tetap mati.";
+          pesanIzin.textContent = tr("x.ditolak");
         }
       }),
       pesanIzin
@@ -394,35 +394,35 @@ async function tampilkanEkstensi() {
     return;
   }
 
-  wadah.textContent = "Memeriksa...";
+  wadah.textContent = tr("x.memeriksa");
 
   let hasil;
   try {
     hasil = await ambilEkstensiBerisiko();
   } catch (e) {
-    wadah.textContent = "Tidak bisa membaca daftar ekstensi.";
+    wadah.textContent = tr("x.gagalBaca");
     return;
   }
   wadah.textContent = "";
 
   if (hasil.length === 0) {
-    wadah.append(buatKosong("Tidak ada ekstensi lain yang berizin cookies. Bagus!"));
+    wadah.append(buatKosong(tr("x.kosong")));
   }
 
   for (const h of hasil) {
     const info = h.info;
-    const tingkat = h.tinggi ? "risiko tinggi" : "risiko sedang";
+    const tingkat = h.tinggi ? tr("x.tinggi") : tr("x.sedang");
 
     // Tombol utama: nonaktifkan (bisa diaktifkan lagi lewat halaman extensions).
     const item = buatItem(
       info.name + " (" + tingkat + ")",
       h.alasan.join("; "),
-      "Nonaktifkan",
+      tr("x.nonaktif"),
       async () => {
         try {
           await chrome.management.setEnabled(info.id, false);
         } catch (e) {
-          alert("Tidak bisa menonaktifkan ekstensi ini (mungkin diatur oleh administrator).");
+          alert(tr("x.gagalNonaktif"));
           return;
         }
         tampilkanEkstensi();
@@ -431,7 +431,7 @@ async function tampilkanEkstensi() {
     );
 
     item.append(
-      buatTombol("Hapus ekstensi", "hapus", async () => {
+      buatTombol(tr("x.hapusExt"), "hapus", async () => {
         try {
           // Browser menampilkan kotak konfirmasinya sendiri.
           await chrome.management.uninstall(info.id, { showConfirmDialog: true });
@@ -440,8 +440,8 @@ async function tampilkanEkstensi() {
         }
         tampilkanEkstensi();
       }),
-      buatTombol("Percayai", "percaya", async () => {
-        if (!confirm("Percayai '" + info.name + "'? Ekstensi ini tidak akan ditandai lagi.")) return;
+      buatTombol(tr("s.percayai"), "percaya", async () => {
+        if (!confirm(tr("x.konfPercaya", { n: info.name }))) return;
         await tambahEkstensiTepercaya(info);
         tampilkanEkstensi();
       })
@@ -452,7 +452,7 @@ async function tampilkanEkstensi() {
   await tampilkanEkstensiTepercaya();
 
   izin.append(
-    buatTombol("Matikan pemeriksaan ekstensi", "kecil", async () => {
+    buatTombol(tr("x.matikan"), "kecil", async () => {
       try {
         await chrome.permissions.remove({ permissions: ["management"] });
       } catch (e) {
@@ -472,13 +472,13 @@ async function tampilkanEkstensiTepercaya() {
 
   const judul = document.createElement("div");
   judul.className = "info";
-  judul.textContent = "Ekstensi yang kamu percayai:";
+  judul.textContent = tr("x.tepercaya");
   wadah.append(judul);
 
   for (const t of daftar) {
     wadah.append(
       buatChip(t.nama, null, [
-        buatTombol("Keluarkan", "", async () => {
+        buatTombol(tr("x.keluarkan"), "", async () => {
           const sisa = (await ambilEkstensiTepercaya()).filter((x) => x.id !== t.id);
           await chrome.storage.local.set({ ekstensiTepercaya: sisa });
           tampilkanEkstensi();
@@ -513,15 +513,15 @@ async function tampilkanAktivitas() {
     wadah.append(
       buatChip(
         daftarSitus.join(" / "),
-        "terakhir dicek: " + waktuRelatif(terbaru, sekarang),
+        tr("l.dicek", { w: waktuRelatif(terbaru, sekarang) }),
         [
-          buatTombol("Buka", "keamanan", async () => {
+          buatTombol(tr("l.buka"), "keamanan", async () => {
             // Membuka halaman dianggap sebagai pengecekan.
             await catatTerakhirCek(daftarSitus);
             chrome.tabs.create({ url: url });
             tampilkanAktivitas();
           }),
-          buatTombol("Sudah dicek", "", async () => {
+          buatTombol(tr("l.sudah"), "", async () => {
             await catatTerakhirCek(daftarSitus);
             tampilkanAktivitas();
           }),
@@ -533,9 +533,7 @@ async function tampilkanAktivitas() {
 
   const tanpaTautan = dipantau.filter((s) => !halaman[s]);
   if (tanpaTautan.length > 0) {
-    info.textContent =
-      "Belum punya tautan aktivitas login: " + tanpaTautan.join(", ") +
-      ". Kamu bisa menambahkannya di bagian 'Situs yang dipantau'.";
+    info.textContent = tr("l.tanpaTautan", { l: tanpaTautan.join(", ") });
   }
 }
 
@@ -553,8 +551,8 @@ async function simpanPengingat() {
   // background.js memantau perubahan ini dan menyesuaikan alarmnya sendiri.
   await chrome.storage.local.set({ pengingat: { aktif: aktif, hari: hari } });
   pesan.textContent = aktif
-    ? "Pengingat aktif: setiap " + hari + " hari."
-    : "Pengingat dimatikan.";
+    ? tr("l.pengingatAktif", { h: hari })
+    : tr("l.pengingatMati");
   tampilkanAktivitas(); // warna "terlambat" bergantung pada jarak hari
 }
 
@@ -568,15 +566,14 @@ document.getElementById("tombolTesNotif").addEventListener("click", () => {
     {
       type: "basic",
       iconUrl: "icon128.png",
-      title: "Tes notifikasi berhasil",
-      message: "Notifikasi Pemantau Cookies berfungsi. Peringatan dan pengingat akan muncul seperti ini.",
+      title: tr("n.judul"),
+      message: tr("n.isi"),
     },
     () => {
       if (chrome.runtime.lastError) {
-        pesan.textContent = "Gagal menampilkan notifikasi: " + chrome.runtime.lastError.message;
+        pesan.textContent = tr("n.gagal", { e: chrome.runtime.lastError.message });
       } else {
-        pesan.textContent =
-          "Notifikasi dikirim. Kalau tidak terlihat, periksa pengaturan notifikasi di sistem operasi dan browser kamu.";
+        pesan.textContent = tr("n.terkirim");
       }
     }
   );
@@ -593,7 +590,7 @@ async function tampilkanSitusDipantau() {
   // Situs bawaan: tidak bisa dihapus
   for (const situs of SITUS_BAWAAN) {
     wadah.append(
-      buatChip(situs, halaman[situs] ? "bawaan" : "bawaan, tanpa tautan aktivitas login", [])
+      buatChip(situs, halaman[situs] ? tr("d.bawaan") : tr("d.bawaanTanpa"), [])
     );
   }
 
@@ -602,8 +599,8 @@ async function tampilkanSitusDipantau() {
     wadah.append(
       buatChip(
         situs,
-        halaman[situs] ? "ada tautan aktivitas login" : "tanpa tautan aktivitas login",
-        [buatTombol("Hapus", "", () => hapusSitusTambahan(situs))]
+        halaman[situs] ? tr("d.ada") : tr("d.tanpa"),
+        [buatTombol(tr("d.hapus"), "", () => hapusSitusTambahan(situs))]
       )
     );
   }
@@ -647,13 +644,13 @@ async function simpanSitusDipantau() {
 
   const situs = rapikanNamaSitus(inputSitus.value);
   if (!situs) {
-    pesan.textContent = "Format situs tidak valid. Contoh yang benar: tokopedia.com";
+    pesan.textContent = tr("d.formatSitus");
     return;
   }
 
   const tautan = rapikanTautan(inputTautan.value);
   if (tautan === null) {
-    pesan.textContent = "Tautan harus berupa alamat lengkap yang diawali https://";
+    pesan.textContent = tr("d.formatTautan");
     return;
   }
 
@@ -664,7 +661,7 @@ async function simpanSitusDipantau() {
     const host = new URL(tautan).hostname;
     if (
       !cocokDomain(host, situs) &&
-      !confirm("Tautan ini mengarah ke " + host + ", bukan " + situs + ". Tetap simpan? Pastikan kamu benar-benar mempercayainya.")
+      !confirm(tr("d.konfHost", { h: host, s: situs }))
     ) {
       return;
     }
@@ -674,7 +671,7 @@ async function simpanSitusDipantau() {
   const sudahAda = SITUS_BAWAAN.includes(situs) || tambahan.includes(situs);
 
   if (sudahAda && !tautan) {
-    pesan.textContent = situs + " sudah ada di daftar.";
+    pesan.textContent = tr("d.sudahAda", { s: situs });
     return;
   }
 
@@ -691,8 +688,10 @@ async function simpanSitusDipantau() {
   }
 
   pesan.textContent = sudahAda
-    ? "Tautan untuk " + situs + " diperbarui."
-    : situs + " ditambahkan" + (tautan ? " beserta tautannya." : ".");
+    ? tr("d.tautanUpdate", { s: situs })
+    : tautan
+      ? tr("d.ditambahTautan", { s: situs })
+      : tr("d.ditambah", { s: situs });
   inputSitus.value = "";
   inputTautan.value = "";
   segarkanDaftarSitus();
@@ -715,7 +714,7 @@ async function tampilkanPilihanSitus() {
 
   const semua = document.createElement("option");
   semua.value = "";
-  semua.textContent = "Semua situs";
+  semua.textContent = tr("c.semuaSitus");
   pilih.append(semua);
 
   for (const situs of await ambilSitusDipantau()) {
@@ -739,8 +738,8 @@ async function tampilkanNamaSesi() {
   for (const nama of pengaturan.global) {
     jumlah++;
     wadah.append(
-      buatChip(nama, "semua situs", [
-        buatTombol("Hapus", "", async () => {
+      buatChip(nama, tr("c.chipSemua"), [
+        buatTombol(tr("d.hapus"), "", async () => {
           const data = await ambilPengaturanNama();
           await chrome.storage.local.set({
             namaCookieTambahan: data.global.filter((n) => n !== nama),
@@ -755,8 +754,8 @@ async function tampilkanNamaSesi() {
     for (const nama of daftar) {
       jumlah++;
       wadah.append(
-        buatChip(nama, "hanya " + situs, [
-          buatTombol("Hapus", "", async () => {
+        buatChip(nama, tr("c.chipHanya", { s: situs }), [
+          buatTombol(tr("d.hapus"), "", async () => {
             const data = await ambilPengaturanNama();
             const sisa = (data.perSitus[situs] || []).filter((n) => n !== nama);
             if (sisa.length > 0) data.perSitus[situs] = sisa;
@@ -769,7 +768,7 @@ async function tampilkanNamaSesi() {
     }
   }
 
-  if (jumlah === 0) wadah.append(buatKosong("Belum ada nama tambahan."));
+  if (jumlah === 0) wadah.append(buatKosong(tr("c.kosong")));
 }
 
 async function tambahNamaSesi() {
@@ -779,35 +778,35 @@ async function tambahNamaSesi() {
 
   const nama = rapikanNamaCookie(input.value);
   if (!nama) {
-    pesan.textContent = "Nama tidak valid. Pakai huruf, angka, _ . atau - (maksimal 60 karakter).";
+    pesan.textContent = tr("c.tidakValid");
     return;
   }
 
   const pengaturan = await ambilPengaturanNama();
 
   if (NAMA_COOKIE_SESI.includes(nama)) {
-    pesan.textContent = nama + " sudah termasuk bawaan.";
+    pesan.textContent = tr("c.bawaan", { n: nama });
     return;
   }
   if (pengaturan.global.includes(nama)) {
-    pesan.textContent = nama + " sudah berlaku untuk semua situs.";
+    pesan.textContent = tr("c.sudahSemua", { n: nama });
     return;
   }
 
   if (!situs) {
     pengaturan.global.push(nama);
     await chrome.storage.local.set({ namaCookieTambahan: pengaturan.global });
-    pesan.textContent = nama + " ditambahkan untuk semua situs.";
+    pesan.textContent = tr("c.tambahSemua", { n: nama });
   } else {
     const daftar = pengaturan.perSitus[situs] || [];
     if (daftar.includes(nama)) {
-      pesan.textContent = nama + " sudah ada untuk " + situs + ".";
+      pesan.textContent = tr("c.sudahUntuk", { n: nama, s: situs });
       return;
     }
     daftar.push(nama);
     pengaturan.perSitus[situs] = daftar;
     await chrome.storage.local.set({ namaCookiePerSitus: pengaturan.perSitus });
-    pesan.textContent = nama + " ditambahkan untuk " + situs + " saja.";
+    pesan.textContent = tr("c.tambahSaja", { n: nama, s: situs });
   }
 
   input.value = "";
@@ -844,14 +843,14 @@ async function tampilkanDaftarPutih() {
 
   const daftar = await ambilDaftarPutih();
   if (daftar.length === 0) {
-    wadah.append(buatKosong("Belum ada situs di daftar putih."));
+    wadah.append(buatKosong(tr("w.kosong")));
     return;
   }
 
   for (const situs of daftar) {
     wadah.append(
       buatChip(situs, null, [
-        buatTombol("Keluarkan", "", async () => {
+        buatTombol(tr("w.keluarkan"), "", async () => {
           const sisa = (await ambilDaftarPutih()).filter((s) => s !== situs);
           await chrome.storage.local.set({ daftarPutih: sisa });
           tampilkanDaftarPutih();
@@ -867,12 +866,12 @@ async function tambahDariInput() {
 
   const situs = rapikanNamaSitus(input.value);
   if (!situs) {
-    pesan.textContent = "Format tidak valid. Contoh yang benar: github.com";
+    pesan.textContent = tr("w.format");
     return;
   }
 
   await tambahKeDaftarPutih(situs);
-  pesan.textContent = situs + " ditambahkan ke daftar putih.";
+  pesan.textContent = tr("w.ditambah", { s: situs });
   input.value = "";
 }
 
@@ -926,13 +925,44 @@ tombolTab.forEach((t, i) => {
   pilihTab(awal);
 }
 
+// ---------- Bahasa ----------
+
+// Mengisi semua teks tetap di popup.html sesuai bahasa aktif (pakai textContent).
+function terapkanTeksStatis() {
+  document.documentElement.lang = bahasaAktif;
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = tr(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n-placeholder]")) el.placeholder = tr(el.dataset.i18nPlaceholder);
+  for (const el of document.querySelectorAll("[data-i18n-aria]")) el.setAttribute("aria-label", tr(el.dataset.i18nAria));
+  for (const el of document.querySelectorAll("[data-bahasa]")) {
+    el.setAttribute("aria-pressed", el.dataset.bahasa === bahasaAktif ? "true" : "false");
+  }
+}
+
+// Menggambar ulang semua bagian yang isinya dibuat oleh kode.
+function renderSemua() {
+  terapkanTeksStatis();
+  tampilkanPeringatan();
+  tampilkanEkstensi();
+  tampilkanAktivitas();
+  muatPengingat();
+  tampilkanSitusDipantau();
+  tampilkanPilihanSitus();
+  tampilkanNamaSesi();
+  tampilkanDaftarPutih();
+}
+
+for (const tombol of document.querySelectorAll("[data-bahasa]")) {
+  tombol.addEventListener("click", async () => {
+    if (tombol.dataset.bahasa === bahasaAktif) return;
+    await simpanBahasa(tombol.dataset.bahasa);
+    // Pesan dan hasil pemindaian lama masih memakai bahasa sebelumnya, jadi dikosongkan.
+    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanDaftarPutih", "hasilPindai"]) {
+      document.getElementById(id).textContent = "";
+    }
+    renderSemua();
+  });
+}
+
 // ---------- Jalankan saat popup dibuka ----------
 
-tampilkanPeringatan();
-tampilkanEkstensi();
-tampilkanAktivitas();
-muatPengingat();
-tampilkanSitusDipantau();
-tampilkanPilihanSitus();
-tampilkanNamaSesi();
-tampilkanDaftarPutih();
+muatBahasa().then(renderSemua);

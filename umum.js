@@ -51,6 +51,28 @@ const SLD_UMUM = ["co", "com", "net", "org", "ac", "go", "or", "gov", "edu", "sc
 // Kata yang sering dipakai situs tiruan: "facebook-login.com", "google-verify.net", dst.
 const KATA_PENIPUAN = /(login|signin|sign-in|secure|verify|verification|account|support|auth|password|recover|update|helpdesk|security)/;
 
+// Akhiran domain yang sangat sering dipakai situs penipuan karena murah atau gratis.
+// Hanya menjadi tanda kalau dipadukan dengan nama merek (misalnya "google.xyz");
+// situs sah juga memakai akhiran ini, jadi akhiran saja tidak cukup.
+const AKHIRAN_SERING_DISALAHGUNAKAN = [
+  "xyz", "top", "tk", "ml", "ga", "cf", "gq", "click", "work", "loan", "zip", "mov",
+  "icu", "buzz", "cyou", "monster", "cfd", "sbs", "rest", "bid", "win", "stream",
+  "vip", "club", "site", "online", "shop", "live", "link", "bond", "quest", "autos",
+];
+
+// Huruf Kiril/Yunani yang sekilas sama dengan huruf Latin, untuk mengenali serangan
+// "homograf" seperti "g[o Kiril][o Kiril]gle.com". Ditulis dengan kode \u supaya
+// tidak membingungkan saat dibaca.
+const HURUF_MIRIP = {
+  "а": "a", "е": "e", "о": "o", "р": "p", "с": "c",
+  "у": "y", "х": "x", "і": "i", "ј": "j", "ѕ": "s",
+  "ԁ": "d", "һ": "h", "ӏ": "l", "ԛ": "q", "ԝ": "w",
+  "к": "k", "ѵ": "v",                                  // Kiril
+  "ο": "o", "ν": "v", "α": "a", "ρ": "p",
+  "ι": "i", "κ": "k", "ϲ": "c",                   // Yunani
+  "ɡ": "g", "ɑ": "a", "ı": "i",                   // Latin khusus
+};
+
 // ---------- Domain ----------
 
 // Menghapus titik di depan domain. Contoh: ".facebook.com" -> "facebook.com"
@@ -115,8 +137,120 @@ function variasiLeet(teks) {
   return [dasar.replace(/1/g, "l"), dasar.replace(/1/g, "i")];
 }
 
+// ---------- Domain internasional (IDN / punycode) ----------
+
+// Membaca teks punycode (RFC 3492) tanpa awalan "xn--". "mnchen-3ya" -> "munchen" berumlaut.
+// Hasilnya null kalau bukan punycode yang sah.
+function dekodePunycode(masukan) {
+  const basis = 36, tMin = 1, tMax = 26, skew = 38, damp = 700;
+  const keluaran = [];
+  const panjang = masukan.length;
+  let i = 0, n = 128, bias = 72;
+
+  let batas = masukan.lastIndexOf("-");
+  if (batas < 0) batas = 0;
+  for (let j = 0; j < batas; j++) {
+    if (masukan.charCodeAt(j) >= 0x80) return null;
+    keluaran.push(masukan.charCodeAt(j));
+  }
+
+  const sesuaikan = (delta, jumlahTitik, pertama) => {
+    let k = 0;
+    delta = pertama ? Math.floor(delta / damp) : delta >> 1;
+    delta += Math.floor(delta / jumlahTitik);
+    for (; delta > (((basis - tMin) * tMax) >> 1); k += basis) {
+      delta = Math.floor(delta / (basis - tMin));
+    }
+    return Math.floor(k + ((basis - tMin + 1) * delta) / (delta + skew));
+  };
+
+  for (let indeks = batas > 0 ? batas + 1 : 0; indeks < panjang; ) {
+    const iLama = i;
+    for (let w = 1, k = basis; ; k += basis) {
+      if (indeks >= panjang) return null;
+      const c = masukan.charCodeAt(indeks++);
+      const digit = c - 48 < 10 ? c - 22 : c - 65 < 26 ? c - 65 : c - 97 < 26 ? c - 97 : basis;
+      if (digit >= basis) return null;
+      i += digit * w;
+      const t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
+      if (digit < t) break;
+      w *= basis - t;
+    }
+    const keluar = keluaran.length + 1;
+    bias = sesuaikan(i - iLama, keluar, iLama === 0);
+    n += Math.floor(i / keluar);
+    i %= keluar;
+    keluaran.splice(i++, 0, n);
+  }
+  return String.fromCodePoint(...keluaran);
+}
+
+// "xn--mnchen-3ya" -> teks aslinya. Mengembalikan null kalau bukan label IDN yang sah.
+function bacaLabelIdn(label) {
+  if (!label.startsWith("xn--")) return null;
+  try {
+    return dekodePunycode(label.slice(4));
+  } catch (e) {
+    return null;
+  }
+}
+
+// Bentuk "kerangka" sebuah teks: aksen dibuang dan huruf Kiril/Yunani yang mirip
+// diganti huruf Latin, sehingga hasilnya bisa dibandingkan dengan nama merek.
+function kerangkaHuruf(teks) {
+  let hasil = "";
+  for (const huruf of teks.toLowerCase().normalize("NFKD")) {
+    if (/[̀-ͯ]/.test(huruf)) continue; // tanda aksen
+    hasil += HURUF_MIRIP[huruf] || huruf;
+  }
+  return hasil;
+}
+
+// Satu nama yang memuat huruf Latin sekaligus huruf Kiril/Yunani hampir selalu penyamaran.
+function campuranHuruf(teks) {
+  return /[a-z]/.test(teks) && /[Ͱ-ϿЀ-ӿԀ-ԯ]/.test(teks);
+}
+
+// Alamat IPv4 yang bukan alamat jaringan lokal (rumah, kantor, komputer sendiri).
+function ipPublik(d) {
+  const m = d.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const o = m.slice(1).map(Number);
+  if (o.some((x) => x > 255)) return false;
+  const a = o[0];
+  const b = o[1];
+  if (a === 0 || a === 10 || a === 127) return false;
+  if (a === 169 && b === 254) return false;
+  if (a === 172 && b >= 16 && b <= 31) return false;
+  if (a === 192 && b === 168) return false;
+  if (a === 100 && b >= 64 && b <= 127) return false;
+  return true;
+}
+
+// Tanda yang lebih lemah daripada "domain mirip": alamat IP publik atau domain
+// internasional (punycode). Situs sah kadang begini juga, jadi hasilnya hanya
+// ditampilkan di pemindaian, tanpa notifikasi. Hasilnya null atau { alasan }.
+function periksaDomainPerhatian(domain) {
+  const d = bersihkanDomain(domain).toLowerCase();
+  const alasan = [];
+
+  if (ipPublik(d)) {
+    alasan.push("alamat IP publik, bukan nama situs (situs resmi jarang memakai IP untuk login)");
+  }
+
+  const bagian = d.split(".");
+  if (bagian.some((l) => bacaLabelIdn(l))) {
+    const terbaca = bagian.map((l) => bacaLabelIdn(l) || l).join(".");
+    alasan.push("domain internasional (punycode), terbaca sebagai '" + terbaca + "'. Pastikan kamu mengenalnya");
+  }
+
+  return alasan.length > 0 ? { alasan: alasan.join("; ") } : null;
+}
+
 // Memeriksa apakah sebuah domain tampak meniru salah satu situs yang dipantau.
 // Hasilnya null (tidak mencurigakan) atau { ditiru, alasan }.
+// "ditiru" bisa null kalau domainnya mencurigakan tetapi tidak jelas meniru siapa
+// (misalnya huruf Latin dan Kiril dicampur dalam satu nama).
 //
 // Cookie pelacak pihak ketiga yang biasa (misalnya dari jaringan iklan) TIDAK
 // ditandai di sini, karena jumlahnya sangat banyak dan umumnya bukan pencurian.
@@ -131,6 +265,33 @@ function periksaDomainMirip(domain, daftarSitus) {
   const bagian = d.split(".");
   const label = bagian.slice(0, -1); // buang akhiran seperti ".com"
   const idxUtama = indeksNamaUtama(bagian);
+
+  // 0) Domain internasional (IDN) yang memakai huruf non-Latin mirip nama merek,
+  //    atau mencampur huruf Latin dengan huruf Kiril/Yunani dalam satu nama.
+  //    Domain IDN biasa (misalnya "munchen" berumlaut) tidak ditandai di sini.
+  for (const bagianIdn of bagian) {
+    const asli = bacaLabelIdn(bagianIdn);
+    if (!asli) continue;
+    const kerangka = kerangkaHuruf(asli);
+
+    for (const situs of daftarSitus) {
+      const merek = merekDari(situs);
+      if (merek.length < 5) continue;
+      if (kerangka === merek || (kerangka.length >= 5 && jarakEdit(kerangka, merek) === 1)) {
+        return {
+          ditiru: situs,
+          alasan: "memakai huruf non-Latin yang menyerupai nama '" + merek + "' (serangan homograf)",
+        };
+      }
+    }
+
+    if (campuranHuruf(asli)) {
+      return {
+        ditiru: null,
+        alasan: "mencampur huruf Latin dengan huruf Kiril/Yunani dalam satu nama (ciri serangan homograf)",
+      };
+    }
+  }
 
   for (const situs of daftarSitus) {
     const merek = merekDari(situs);
@@ -150,6 +311,16 @@ function periksaDomainMirip(domain, daftarSitus) {
       if (l === merek) {
         if (i !== idxUtama) {
           return { ditiru: situs, alasan: "memakai nama '" + merek + "' sebagai subdomain dari domain lain" };
+        }
+
+        // 2b) Nama persis sama, tetapi di akhiran yang sering disalahgunakan.
+        //     Contoh: "google.xyz". Akhiran negara seperti "google.co.id" wajar.
+        const akhiran = bagian[bagian.length - 1];
+        if (AKHIRAN_SERING_DISALAHGUNAKAN.includes(akhiran)) {
+          return {
+            ditiru: situs,
+            alasan: "memakai nama persis '" + merek + "' di akhiran ." + akhiran + " yang sering disalahgunakan",
+          };
         }
         continue; // nama sama dengan akhiran lain (google.co.id) wajar
       }

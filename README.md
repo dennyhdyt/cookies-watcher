@@ -27,8 +27,9 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 ## Cara deteksi saat ini
 
 - **Peringatan:** cookie sesi di situs penting (Facebook, Google, dll.) dibuat atau diubah padahal tidak ada tab yang membuka situs itu.
-- **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar; juga domain yang meniru situs yang dipantau.
-- **Domain mirip:** cookie dari domain yang meniru situs yang dipantau (misalnya `faceb00k.com`, `facebok.com`, `facebook-login.com`, `facebook.com.evil.net`) langsung memicu peringatan, sekali per domain, dan muncul di pemindaian. Cookie pelacak/iklan biasa sengaja **tidak** ditandai, karena jumlahnya sangat banyak dan umumnya bukan pencurian. Domain resmi seperti `google.co.id` atau `googleapis.com` dikenali sebagai aman.
+- **Pemindaian:** cookie sesi tanpa HttpOnly, tanpa Secure, atau dengan SameSite longgar; domain yang meniru situs yang dipantau; dan domain yang "perlu diperhatikan" (alamat IP publik atau domain internasional/punycode, ditampilkan dengan kotak kuning).
+- **Domain mirip:** cookie dari domain yang meniru situs yang dipantau langsung memicu peringatan dan notifikasi, sekali per domain. Yang dikenali: salah ketik atau angka pengganti huruf (`faceb00k.com`, `facebok.com`), nama dengan kata pancingan (`facebook-login.com`), nama sebagai subdomain (`facebook.com.evil.net`), nama persis di akhiran yang sering disalahgunakan (`google.xyz`, `facebook.top`), serta serangan homograf: huruf Kiril/Yunani yang menyerupai huruf Latin (`g[o Kiril][o Kiril]gle.com`) atau satu nama yang mencampur huruf Latin dan Kiril. Domain homograf ditampilkan dalam bentuk punycode (`xn--...`) supaya tidak ikut mengecoh. Cookie pelacak/iklan biasa sengaja **tidak** ditandai, karena jumlahnya sangat banyak dan umumnya bukan pencurian. Domain resmi seperti `google.co.id` atau `googleapis.com` dikenali sebagai aman.
+- **Perlu diperhatikan:** alamat IP publik (alamat jaringan lokal seperti 192.168.x.x tidak dihitung) dan domain punycode biasa (misalnya situs berhuruf Mandarin atau Rusia yang sah) hanya muncul di pemindaian, **tanpa notifikasi**, karena situs sah juga kadang begini. Tombol **Percayai** memasukkannya ke daftar putih.
 
 - **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang membuat Chrome/Edge menampilkan peringatan "mengelola ekstensi" saat memasang.
 - **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Tiap baris mencatat kapan terakhir dicek (merah kalau belum pernah atau sudah lewat dari jarak pengingat). Tombol **Buka** dan **Sudah dicek** sama-sama mencatat waktu; "Buka" dianggap pengecekan, jadi pastikan kamu benar-benar melihat daftar perangkatnya.
@@ -46,7 +47,7 @@ kadang bisa salah peringatan.
 - Ekstensi browser **tidak bisa melihat apakah cookie dipakai di perangkat lain**. Itu hanya terlihat oleh server situs, lewat halaman "aktivitas login" atau "perangkat yang masuk". Tombol "Keluar dari semua perangkat" di peringatan membuka halaman itu.
 - Pemeriksaan ekstensi hanya membaca izin yang tercantum, bukan perilaku sebenarnya. Ekstensi tanpa izin cookies masih bisa membaca cookie biasa lewat skrip di halaman, jadi ini bukan jaminan keamanan penuh.
 - Ekstensi pribadi yang dipasang lewat Load unpacked (seperti ekstensi ini) tidak diperiksa terhadap dirinya sendiri.
-- Deteksi domain mirip adalah tebakan dari bentuk nama domain. Ia belum mengenali nama merek yang persis sama di akhiran tidak biasa (misalnya `google.xyz`), dan daftar domain resmi yang dikecualikan hanya sebagian; kalau ada situs sah yang salah ditandai, masukkan ke daftar putih.
+- Deteksi domain mirip adalah tebakan dari bentuk nama domain. Daftar domain resmi yang dikecualikan dan daftar akhiran berisiko hanya sebagian; kalau ada situs sah yang salah ditandai, masukkan ke daftar putih. Nama merek yang pendek (kurang dari 5 huruf, misalnya `x.com`) tidak diperiksa karena terlalu sering salah cocok.
 - Ekstensi tidak punya cara mengetahui situs induk sebuah cookie, jadi cookie pihak ketiga biasa (iklan, pelacak) tidak dinilai. Yang dinilai adalah apakah domainnya meniru situs yang kamu pantau.
 
 ## Penting
@@ -56,6 +57,6 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 
 ## Ide pengembangan berikutnya
 
-1. Sinyal domain tambahan: alamat IP publik, domain punycode (IDN), dan nama merek persis di akhiran tidak biasa
+1. Panduan darurat di popup: daftar langkah berurutan saat ada peringatan (ganti password dari perangkat bersih, keluar dari semua perangkat, periksa ekstensi, pindai antivirus)
 2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
 3. Tombol untuk memicu pengingat sekarang juga, bukan hanya menunggu jaraknya

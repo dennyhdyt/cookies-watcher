@@ -23,6 +23,13 @@ function buatKosong(teks) {
   return p;
 }
 
+// Judul untuk domain yang mencurigakan. "ditiru" kosong kalau tidak jelas meniru siapa.
+function judulDomain(ditiru, domain) {
+  return ditiru
+    ? "Domain mirip " + ditiru + ": " + domain
+    : "Domain mencurigakan: " + domain;
+}
+
 // Membuat satu kotak item di layar.
 // PENTING: kita pakai textContent (bukan innerHTML) supaya nama cookie
 // atau domain yang berbahaya tidak bisa menjalankan kode di ekstensi kita.
@@ -149,7 +156,7 @@ async function tampilkanPeringatan() {
 
     const item = mirip
       ? buatItem(
-          "Domain mirip " + p.ditiru + ": " + p.situs,
+          judulDomain(p.ditiru, p.situs),
           p.alasan + " (" + waktu + ")",
           "Hapus semua cookie domain ini",
           async () => {
@@ -175,7 +182,7 @@ async function tampilkanPeringatan() {
     item.append(
       buatTombol("Percayai situs ini", "percaya", async () => {
         const peringatanTambahan = mirip
-          ? "PERHATIAN: domain ini terlihat meniru " + p.ditiru + ". "
+          ? "PERHATIAN: domain ini terlihat mencurigakan" + (p.ditiru ? " (meniru " + p.ditiru + ")" : "") + ". "
           : "";
         if (!confirm(peringatanTambahan + "Percayai " + p.situs + "? Peringatan dari situs ini tidak akan muncul lagi.")) return;
         await tambahKeDaftarPutih(p.situs);
@@ -250,6 +257,7 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
 
   const cacheMirip = new Map(); // domain -> hasil periksaDomainMirip
   const domainMirip = new Map(); // domain -> { info, jumlah, contoh }
+  const domainPerhatian = new Map(); // domain -> { alasan, jumlah }
   const berisiko = []; // { cookie, alasan }
 
   for (const cookie of semuaCookie) {
@@ -267,15 +275,32 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
       continue;
     }
 
+    // Tanda yang lebih lemah: alamat IP publik atau domain internasional (punycode).
+    // Hanya dicatat; pemeriksaan cookie sesi di bawah tetap berjalan.
+    const perhatian = periksaDomainPerhatian(dom);
+    if (perhatian) {
+      const catatan = domainPerhatian.get(dom) || { alasan: perhatian.alasan, jumlah: 0 };
+      catatan.jumlah++;
+      domainPerhatian.set(dom, catatan);
+    }
+
     // Cookie sesi dengan pengaturan lemah (nama sesi bisa berbeda per situs).
     const situs = dipantau.find((s) => cocokDomain(cookie.domain, s)) || null;
     const alasan = periksaRisiko(cookie, namaSesiUntuk(situs, pengaturan));
     if (alasan.length > 0) berisiko.push({ cookie: cookie, alasan: alasan });
   }
 
+  // Tombol "Percayai" untuk hasil pemindaian: masuk daftar putih lalu barisnya hilang.
+  const tombolPercayaiDomain = (dom, item) =>
+    buatTombol("Percayai", "percaya", async () => {
+      if (!confirm("Percayai " + dom + "? Domain ini tidak akan ditandai lagi.")) return;
+      await tambahKeDaftarPutih(dom);
+      item.remove();
+    });
+
   for (const [dom, catatan] of domainMirip) {
     const item = buatItem(
-      "Domain mirip " + catatan.info.ditiru + ": " + dom,
+      judulDomain(catatan.info.ditiru, dom),
       "Domain ini " + catatan.info.alasan + ". Menyimpan " + catatan.jumlah + " cookie.",
       "Hapus semua cookie domain ini",
       async () => {
@@ -285,6 +310,24 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
       },
       true
     );
+    item.append(tombolPercayaiDomain(dom, item));
+    wadah.append(item);
+  }
+
+  for (const [dom, catatan] of domainPerhatian) {
+    const item = buatItem(
+      "Perlu diperhatikan: " + dom,
+      "Tanda: " + catatan.alasan + ". Menyimpan " + catatan.jumlah + " cookie.",
+      "Hapus semua cookie domain ini",
+      async () => {
+        if (!confirm("Hapus semua cookie dari " + dom + "?")) return;
+        await hapusSemuaCookieDomain(dom);
+        item.remove();
+      },
+      false
+    );
+    item.classList.add("perhatian");
+    item.append(tombolPercayaiDomain(dom, item));
     wadah.append(item);
   }
 
@@ -303,8 +346,8 @@ document.getElementById("tombolPindai").addEventListener("click", async () => {
     wadah.append(item);
   }
 
-  if (domainMirip.size === 0 && berisiko.length === 0) {
-    wadah.append(buatKosong("Tidak ada domain tiruan atau cookie sesi berisiko ditemukan."));
+  if (domainMirip.size === 0 && domainPerhatian.size === 0 && berisiko.length === 0) {
+    wadah.append(buatKosong("Tidak ada domain mencurigakan atau cookie sesi berisiko ditemukan."));
   }
 });
 

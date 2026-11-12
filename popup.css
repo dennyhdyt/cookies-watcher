@@ -50,6 +50,11 @@ section {
   background: #fce8e6;
 }
 
+.item.perhatian {
+  border-color: #f9ab00;
+  background: #fef7e0;
+}
+
 .item button {
   margin-bottom: 4px;
 }

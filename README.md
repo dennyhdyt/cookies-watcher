@@ -23,6 +23,9 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
 | `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, aktivitas login, daftar putih |
+| `periksa-keamanan.js` | Alat bantu: `node periksa-keamanan.js` memeriksa izin dan melarang jaringan, eval, pembacaan nilai cookie, dll. |
+| `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
+| `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
 
 ## Cara deteksi saat ini
 
@@ -31,7 +34,7 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 - **Domain mirip:** cookie dari domain yang meniru situs yang dipantau langsung memicu peringatan dan notifikasi, sekali per domain. Yang dikenali: salah ketik atau angka pengganti huruf (`faceb00k.com`, `facebok.com`), nama dengan kata pancingan (`facebook-login.com`), nama sebagai subdomain (`facebook.com.evil.net`), nama persis di akhiran yang sering disalahgunakan (`google.xyz`, `facebook.top`), serta serangan homograf: huruf Kiril/Yunani yang menyerupai huruf Latin (`g[o Kiril][o Kiril]gle.com`) atau satu nama yang mencampur huruf Latin dan Kiril. Domain homograf ditampilkan dalam bentuk punycode (`xn--...`) supaya tidak ikut mengecoh. Cookie pelacak/iklan biasa sengaja **tidak** ditandai, karena jumlahnya sangat banyak dan umumnya bukan pencurian. Domain resmi seperti `google.co.id` atau `googleapis.com` dikenali sebagai aman.
 - **Perlu diperhatikan:** alamat IP publik (alamat jaringan lokal seperti 192.168.x.x tidak dihitung) dan domain punycode biasa (misalnya situs berhuruf Mandarin atau Rusia yang sah) hanya muncul di pemindaian, **tanpa notifikasi**, karena situs sah juga kadang begini. Tombol **Percayai** memasukkannya ke daftar putih.
 
-- **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang membuat Chrome/Edge menampilkan peringatan "mengelola ekstensi" saat memasang.
+- **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang bersifat **opsional**: mati secara bawaan, dan baru aktif kalau kamu menekan tombol "Aktifkan pemeriksaan ekstensi" di popup (browser akan meminta persetujuan). Bisa dimatikan lagi kapan saja dengan tombol yang sama.
 - **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Tiap baris mencatat kapan terakhir dicek (merah kalau belum pernah atau sudah lewat dari jarak pengingat). Tombol **Buka** dan **Sudah dicek** sama-sama mencatat waktu; "Buka" dianggap pengecekan, jadi pastikan kamu benar-benar melihat daftar perangkatnya.
 - **Pengingat berkala:** mati secara bawaan. Centang "Ingatkan saya setiap N hari"; notifikasi hanya muncul kalau ada situs yang belum dicek dalam N hari terakhir, dan menyebut situs mana saja. Tombol **Tes notifikasi** menampilkan satu notifikasi contoh untuk memastikan notifikasi tidak diblokir. Pengingat memakai izin `alarms`.
 - **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri, dengan tautan halaman aktivitas login yang opsional (harus https; kalau mengarah ke host lain, kamu diminta mengonfirmasi dulu). Menyimpan ulang situs yang sama memperbarui tautannya. Menghapus situs tambahan juga membersihkan tautan, nama cookie, dan catatan cek miliknya.
@@ -41,6 +44,24 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 
 Ini heuristik (tebakan berdasarkan tanda-tanda), bukan bukti pasti pembajakan, jadi
 kadang bisa salah peringatan.
+
+## Keamanan
+
+Ekstensi ini sengaja dibuat kecil permukaan serangnya. Detail lengkap ada di `SECURITY.md`.
+
+| Izin | Wajib? | Untuk apa |
+|---|---|---|
+| `cookies` | ya | Melihat nama, domain, dan pengaturan cookie (nilai tidak dibaca) |
+| `storage` | ya | Menyimpan daftar peringatan dan pengaturan secara lokal |
+| `notifications` | ya | Memberi tahu saat ada perubahan mencurigakan |
+| `alarms` | ya | Pengingat berkala |
+| akses semua situs | ya | Syarat Chrome agar cookies semua situs bisa dibaca |
+| `management` | opsional | Memeriksa ekstensi lain, hanya kalau kamu aktifkan |
+
+Tanpa jaringan, tanpa kode dari luar, tanpa penerima pesan dari situs web. Ini bukan jaminan
+kebal: malware di komputer atau akun pemilik yang dibobol tetap di luar jangkauan ekstensi ini.
+
+Sebelum commit atau rilis: jalankan `node periksa-keamanan.js`. Untuk rilis: `node buat-rilis.js`.
 
 ## Batasan
 

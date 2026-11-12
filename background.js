@@ -184,8 +184,21 @@ async function periksaEkstensiBaru(info) {
   );
 }
 
-chrome.management.onInstalled.addListener(periksaEkstensiBaru);
-chrome.management.onEnabled.addListener(periksaEkstensiBaru);
+// Izin "management" bersifat opsional. Kalau belum diberikan, chrome.management
+// tidak ada, jadi pendengarnya hanya dipasang kalau tersedia. Fungsi ini aman
+// dipanggil berulang kali (pendengar yang sama tidak terpasang dua kali).
+function pasangPendengarEkstensi() {
+  if (!chrome.management || !chrome.management.onInstalled) return;
+  chrome.management.onInstalled.addListener(periksaEkstensiBaru);
+  chrome.management.onEnabled.addListener(periksaEkstensiBaru);
+}
+
+pasangPendengarEkstensi();
+
+// Saat izinnya baru saja diberikan lewat popup, langsung pasang pendengarnya.
+chrome.permissions.onAdded.addListener((izin) => {
+  if ((izin.permissions || []).includes("management")) pasangPendengarEkstensi();
+});
 
 // ---------- Pengingat berkala: cek aktivitas login ----------
 // Ekstensi tidak bisa melihat pemakaian cookie di perangkat lain, jadi kita

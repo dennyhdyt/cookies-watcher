@@ -53,6 +53,17 @@ function bisaDiperiksa(info) {
   );
 }
 
+// Izin "management" bersifat opsional: baru diminta saat kamu menyalakan pemeriksaan
+// ekstensi lewat popup, dan bisa dicabut kapan saja. Fungsi ini mengecek apakah
+// izinnya sedang aktif.
+async function adaIzinManajemen() {
+  try {
+    return await chrome.permissions.contains({ permissions: ["management"] });
+  } catch (e) {
+    return false;
+  }
+}
+
 // Daftar ekstensi tepercaya, disimpan sebagai [{ id, nama }].
 async function ambilEkstensiTepercaya() {
   const data = await chrome.storage.local.get("ekstensiTepercaya");
@@ -61,6 +72,7 @@ async function ambilEkstensiTepercaya() {
 
 // Mengambil semua ekstensi aktif yang mencurigakan (di luar yang tepercaya).
 async function ambilEkstensiBerisiko() {
+  if (!chrome.management || typeof chrome.management.getAll !== "function") throw new Error("Izin management belum diberikan");
   const semua = await chrome.management.getAll();
   const tepercaya = await ambilEkstensiTepercaya();
 

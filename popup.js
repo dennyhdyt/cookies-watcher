@@ -361,8 +361,38 @@ async function tambahEkstensiTepercaya(info) {
   }
 }
 
+// Pemeriksaan ekstensi butuh izin opsional "management". Izin itu baru diminta saat
+// kamu menekan tombolnya, dan bisa dicabut lagi kapan saja.
 async function tampilkanEkstensi() {
   const wadah = document.getElementById("daftarEkstensi");
+  const izin = document.getElementById("izinEkstensi");
+  wadah.textContent = "";
+  izin.textContent = "";
+  document.getElementById("daftarEkstensiTepercaya").textContent = "";
+
+  if (!(await adaIzinManajemen())) {
+    const pesanIzin = document.createElement("div");
+    pesanIzin.className = "info";
+    izin.append(
+      buatKosong("Pemeriksaan ekstensi belum aktif. Fitur ini butuh izin tambahan untuk melihat daftar ekstensi lain. Izinnya bisa kamu cabut kapan saja."),
+      buatTombol("Aktifkan pemeriksaan ekstensi", "", async () => {
+        let diberikan = false;
+        try {
+          diberikan = await chrome.permissions.request({ permissions: ["management"] });
+        } catch (e) {
+          diberikan = false;
+        }
+        if (diberikan) {
+          tampilkanEkstensi();
+        } else {
+          pesanIzin.textContent = "Izin tidak diberikan, jadi pemeriksaan ekstensi tetap mati.";
+        }
+      }),
+      pesanIzin
+    );
+    return;
+  }
+
   wadah.textContent = "Memeriksa...";
 
   let hasil;
@@ -419,6 +449,17 @@ async function tampilkanEkstensi() {
   }
 
   await tampilkanEkstensiTepercaya();
+
+  izin.append(
+    buatTombol("Matikan pemeriksaan ekstensi", "kecil", async () => {
+      try {
+        await chrome.permissions.remove({ permissions: ["management"] });
+      } catch (e) {
+        // abaikan: tampilan di bawah akan memeriksa ulang izinnya
+      }
+      tampilkanEkstensi();
+    })
+  );
 }
 
 async function tampilkanEkstensiTepercaya() {

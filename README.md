@@ -19,7 +19,7 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 |------|--------|
 | `manifest.json` | "KTP" ekstensi: nama, izin yang diminta, file yang dipakai |
 | `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, dan pengingat berkala |
-| `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik |
+| `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik, dibagi dalam 5 tab: Peringatan, Pemindaian, Ekstensi, Login, Pengaturan (angka merah di tab Peringatan = jumlah peringatan) |
 | `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
 | `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, aktivitas login, daftar putih |

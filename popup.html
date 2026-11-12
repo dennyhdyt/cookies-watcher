@@ -8,12 +8,29 @@
   <body>
     <h1>Pemantau Cookies</h1>
 
+    <nav class="tab" role="tablist" aria-label="Bagian">
+      <button role="tab" id="tab-peringatan" data-panel="panel-peringatan" aria-selected="true">Peringatan</button>
+      <button role="tab" id="tab-pindai" data-panel="panel-pindai" aria-selected="false">Pemindaian</button>
+      <button role="tab" id="tab-ekstensi" data-panel="panel-ekstensi" aria-selected="false">Ekstensi</button>
+      <button role="tab" id="tab-login" data-panel="panel-login" aria-selected="false">Login</button>
+      <button role="tab" id="tab-pengaturan" data-panel="panel-pengaturan" aria-selected="false">Pengaturan</button>
+    </nav>
+
+    <div class="panel" id="panel-peringatan" role="tabpanel" aria-labelledby="tab-peringatan">
     <section>
       <h2>Peringatan</h2>
       <div id="peringatan"></div>
       <button id="bersihkanPeringatan" class="kecil">Bersihkan semua peringatan</button>
     </section>
 
+    <section class="tips">
+      <strong>Kalau akunmu terasa dibajak:</strong> menghapus cookie di sini
+      saja tidak cukup. Segera ganti password dan pilih
+      "keluar dari semua perangkat" di situs tersebut.
+    </section>
+    </div>
+
+    <div class="panel" id="panel-pindai" role="tabpanel" aria-labelledby="tab-pindai" hidden>
     <section>
       <h2>Pemindaian cookies</h2>
       <p class="info">Mencari domain yang meniru situs yang dipantau, domain yang perlu diperhatikan (alamat IP publik, domain internasional), dan cookies sesi dengan pengaturan keamanan lemah.</p>
@@ -21,6 +38,9 @@
       <div id="hasilPindai"></div>
     </section>
 
+    </div>
+
+    <div class="panel" id="panel-ekstensi" role="tabpanel" aria-labelledby="tab-ekstensi" hidden>
     <section>
       <h2>Ekstensi berizin cookies</h2>
       <p class="info">Ekstensi lain yang bisa mengambil cookies atau melihat lalu lintas web. Nonaktifkan atau hapus yang tidak kamu kenal.</p>
@@ -29,6 +49,9 @@
       <div id="daftarEkstensiTepercaya"></div>
     </section>
 
+    </div>
+
+    <div class="panel" id="panel-login" role="tabpanel" aria-labelledby="tab-login" hidden>
     <section>
       <h2>Periksa aktivitas login</h2>
       <p class="info">Satu-satunya cara melihat apakah akunmu dipakai di perangkat lain adalah lewat halaman di bawah. Cari perangkat atau lokasi yang tidak kamu kenal, lalu keluarkan dari sana.</p>
@@ -52,8 +75,11 @@
       <div id="pesanPengingat" class="info"></div>
     </section>
 
-    <section>
-      <h2>Situs yang dipantau</h2>
+    </div>
+
+    <div class="panel" id="panel-pengaturan" role="tabpanel" aria-labelledby="tab-pengaturan" hidden>
+    <details>
+      <summary>Situs yang dipantau</summary>
       <p class="info">Peringatan hanya muncul untuk situs di daftar ini. Tautan aktivitas login boleh dikosongkan; isi kalau situsnya punya halaman perangkat yang sedang masuk.</p>
       <div class="baris">
         <input id="inputDipantau" type="text" placeholder="situs, contoh: tokopedia.com" />
@@ -64,10 +90,11 @@
       </div>
       <div id="pesanDipantau" class="info"></div>
       <div id="daftarDipantau"></div>
-    </section>
 
-    <section>
-      <h2>Nama cookie sesi</h2>
+    </details>
+
+    <details>
+      <summary>Nama cookie sesi</summary>
       <p class="info">Cookie dengan nama ini dianggap cookie sesi login. Nama yang umum sudah termasuk. Pilih "Semua situs", atau satu situs saja kalau namanya khusus untuk situs itu.</p>
       <div class="baris">
         <select id="pilihSitusNama"></select>
@@ -76,10 +103,11 @@
       </div>
       <div id="pesanNamaSesi" class="info"></div>
       <div id="daftarNamaSesi"></div>
-    </section>
 
-    <section>
-      <h2>Daftar putih</h2>
+    </details>
+
+    <details>
+      <summary>Daftar putih</summary>
       <p class="info">Situs di sini tidak akan memicu peringatan dan tidak muncul di hasil pemindaian.</p>
       <div class="baris">
         <input id="inputSitus" type="text" placeholder="contoh: github.com" />
@@ -87,13 +115,8 @@
       </div>
       <div id="pesanDaftarPutih" class="info"></div>
       <div id="daftarPutih"></div>
-    </section>
-
-    <section class="tips">
-      <strong>Kalau akunmu terasa dibajak:</strong> menghapus cookie di sini
-      saja tidak cukup. Segera ganti password dan pilih
-      "keluar dari semua perangkat" di situs tersebut.
-    </section>
+    </details>
+    </div>
 
     <script src="umum.js"></script>
     <script src="ekstensi.js"></script>

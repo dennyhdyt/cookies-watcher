@@ -144,6 +144,7 @@ async function tampilkanPeringatan() {
     ambilHalamanSitus(),
   ]);
   const daftar = data.peringatan || [];
+  tampilkanJumlahTab(daftar.length);
 
   if (daftar.length === 0) {
     wadah.append(buatKosong("Belum ada peringatan. Bagus!"));
@@ -879,6 +880,51 @@ document.getElementById("tombolTambah").addEventListener("click", tambahDariInpu
 document.getElementById("inputSitus").addEventListener("keydown", (e) => {
   if (e.key === "Enter") tambahDariInput();
 });
+
+// ---------- Tab ----------
+
+const tombolTab = Array.from(document.querySelectorAll(".tab button"));
+
+// Angka merah di tab Peringatan. Dibuat dengan textContent, bukan HTML.
+function tampilkanJumlahTab(jumlah) {
+  const tab = document.getElementById("tab-peringatan");
+  const lama = tab.querySelector(".jumlah");
+  if (lama) lama.remove();
+  if (!jumlah) return;
+  const angka = document.createElement("span");
+  angka.className = "jumlah";
+  angka.textContent = String(jumlah);
+  tab.append(angka);
+}
+
+function pilihTab(tab) {
+  for (const t of tombolTab) {
+    const aktif = t === tab;
+    t.setAttribute("aria-selected", aktif ? "true" : "false");
+    t.tabIndex = aktif ? 0 : -1;
+    document.getElementById(t.dataset.panel).hidden = !aktif;
+  }
+  try { localStorage.setItem("tabAktif", tab.id); } catch (e) { /* boleh gagal */ }
+}
+
+tombolTab.forEach((t, i) => {
+  t.addEventListener("click", () => pilihTab(t));
+  t.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const baru = tombolTab[(i + (e.key === "ArrowRight" ? 1 : tombolTab.length - 1)) % tombolTab.length];
+    pilihTab(baru);
+    baru.focus();
+  });
+});
+
+{
+  let awal = tombolTab[0];
+  try {
+    const tersimpan = tombolTab.find((t) => t.id === localStorage.getItem("tabAktif"));
+    if (tersimpan) awal = tersimpan;
+  } catch (e) { /* abaikan */ }
+  pilihTab(awal);
+}
 
 // ---------- Jalankan saat popup dibuka ----------
 

@@ -234,6 +234,16 @@ async function aturAlarm(buatUlang) {
 chrome.runtime.onInstalled.addListener(() => aturAlarm(false));
 chrome.runtime.onStartup.addListener(() => aturAlarm(false));
 
+// Saat browser dibuka: hapus cookie sesi login situs yang kamu pilih (kalau ada).
+async function saatBrowserDibuka() {
+  try {
+    await bersihkanCookieSesi();
+  } catch (e) {
+    // Kalau gagal, biarkan: cookie tetap ada dan bisa dibersihkan manual dari popup.
+  }
+}
+chrome.runtime.onStartup.addListener(saatBrowserDibuka);
+
 // Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
 chrome.storage.onChanged.addListener((perubahan, area) => {
   if (area === "local" && perubahan.pengingat) aturAlarm(true);

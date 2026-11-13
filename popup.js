@@ -76,17 +76,6 @@ function buatChip(teksUtama, teksKecil, daftarTombol, kelasKecil) {
 
 // ---------- Fungsi bantu data ----------
 
-// Menghapus satu cookie. Chrome butuh alamat (URL) lengkap untuk menghapus.
-async function hapusCookie(cookie) {
-  const protokol = cookie.secure ? "https://" : "http://";
-  const url = protokol + bersihkanDomain(cookie.domain) + cookie.path;
-  await chrome.cookies.remove({
-    url: url,
-    name: cookie.nama || cookie.name,
-    storeId: cookie.storeId,
-  });
-}
-
 // Menghapus SEMUA cookie milik satu domain (dipakai untuk domain tiruan).
 async function hapusSemuaCookieDomain(domain) {
   const bersih = bersihkanDomain(domain);
@@ -925,6 +914,68 @@ tombolTab.forEach((t, i) => {
   pilihTab(awal);
 }
 
+// ---------- Hapus cookie sesi saat browser dibuka ----------
+
+async function tampilkanHapusBuka() {
+  const pilih = document.getElementById("pilihSitusBuka");
+  const terpilih = pilih.value;
+  pilih.textContent = "";
+  for (const situs of await ambilSitusDipantau()) {
+    const opsi = document.createElement("option");
+    opsi.value = situs;
+    opsi.textContent = situs;
+    pilih.append(opsi);
+  }
+  if ([...pilih.options].some((o) => o.value === terpilih)) pilih.value = terpilih;
+
+  const wadah = document.getElementById("daftarBuka");
+  wadah.textContent = "";
+  const daftar = await ambilHapusSaatBuka();
+  if (daftar.length === 0) {
+    wadah.append(buatKosong(tr("set.buka.kosong")));
+  }
+  for (const situs of daftar) {
+    wadah.append(
+      buatChip(situs, null, [
+        buatTombol(tr("w.keluarkan"), "", async () => {
+          const sisa = (await ambilHapusSaatBuka()).filter((s) => s !== situs);
+          await chrome.storage.local.set({ hapusSaatBuka: sisa });
+          tampilkanHapusBuka();
+        }),
+      ])
+    );
+  }
+
+  const hasil = await ambilHasilBersih();
+  document.getElementById("statusBuka").textContent = hasil
+    ? tr("set.buka.status", { w: formatWaktu(hasil.waktu), n: hasil.jumlah })
+    : tr("set.buka.belum");
+  document.getElementById("tombolBersihkanSekarang").disabled = daftar.length === 0;
+}
+
+document.getElementById("tombolTambahBuka").addEventListener("click", async () => {
+  const situs = document.getElementById("pilihSitusBuka").value;
+  const pesan = document.getElementById("pesanBuka");
+  if (!situs) return;
+  const daftar = await ambilHapusSaatBuka();
+  if (daftar.includes(situs)) {
+    pesan.textContent = tr("d.sudahAda", { s: situs });
+    return;
+  }
+  await chrome.storage.local.set({ hapusSaatBuka: daftar.concat(situs) });
+  pesan.textContent = tr("set.buka.ditambah", { s: situs });
+  tampilkanHapusBuka();
+});
+
+document.getElementById("tombolBersihkanSekarang").addEventListener("click", async () => {
+  const daftar = await ambilHapusSaatBuka();
+  if (daftar.length === 0) return;
+  if (!confirm(tr("set.buka.konf", { n: daftar.length }))) return;
+  const jumlah = await bersihkanCookieSesi();
+  document.getElementById("pesanBuka").textContent = tr("set.buka.hasil", { n: jumlah });
+  tampilkanHapusBuka();
+});
+
 // ---------- Bahasa ----------
 
 // Mengisi semua teks tetap di popup.html sesuai bahasa aktif (pakai textContent).
@@ -948,6 +999,7 @@ function renderSemua() {
   tampilkanSitusDipantau();
   tampilkanPilihanSitus();
   tampilkanNamaSesi();
+  tampilkanHapusBuka();
   tampilkanDaftarPutih();
 }
 
@@ -956,7 +1008,7 @@ for (const tombol of document.querySelectorAll("[data-bahasa]")) {
     if (tombol.dataset.bahasa === bahasaAktif) return;
     await simpanBahasa(tombol.dataset.bahasa);
     // Pesan dan hasil pemindaian lama masih memakai bahasa sebelumnya, jadi dikosongkan.
-    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanDaftarPutih", "hasilPindai"]) {
+    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanBuka", "pesanDaftarPutih", "hasilPindai"]) {
       document.getElementById(id).textContent = "";
     }
     renderSemua();

@@ -385,6 +385,52 @@ async function ambilHalamanSitus() {
   return Object.assign({}, HALAMAN_BAWAAN, data.halamanSitus || {});
 }
 
+// ---------- Hapus cookie sesi saat browser dibuka ----------
+
+// Menghapus satu cookie. Chrome butuh alamat (URL) lengkap untuk menghapus.
+async function hapusCookie(cookie) {
+  const protokol = cookie.secure ? "https://" : "http://";
+  const url = protokol + bersihkanDomain(cookie.domain) + cookie.path;
+  await chrome.cookies.remove({
+    url: url,
+    name: cookie.nama || cookie.name,
+    storeId: cookie.storeId,
+  });
+}
+
+async function ambilHapusSaatBuka() {
+  const data = await chrome.storage.local.get("hapusSaatBuka");
+  return data.hapusSaatBuka || [];
+}
+
+async function ambilHasilBersih() {
+  const data = await chrome.storage.local.get("hasilBersih");
+  return data.hasilBersih || null;
+}
+
+// Menghapus cookie SESI LOGIN (hanya yang namanya ada di daftar nama sesi) dari
+// semua situs di daftar "hapus saat dibuka". Cookie lain (tema, bahasa, dll.) tidak disentuh.
+// Mengembalikan jumlah cookie yang dihapus.
+async function bersihkanCookieSesi() {
+  const daftar = await ambilHapusSaatBuka();
+  if (daftar.length === 0) return 0;
+
+  const pengaturan = await ambilPengaturanNama();
+  let jumlah = 0;
+  for (const situs of daftar) {
+    const nama = namaSesiUntuk(situs, pengaturan);
+    const semua = await chrome.cookies.getAll({ domain: situs });
+    for (const cookie of semua) {
+      if (!cocokDomain(cookie.domain, situs)) continue;
+      if (!nama.includes(cookie.name.toLowerCase())) continue;
+      await hapusCookie(cookie);
+      jumlah++;
+    }
+  }
+  await chrome.storage.local.set({ hasilBersih: { waktu: Date.now(), jumlah: jumlah } });
+  return jumlah;
+}
+
 // ---------- Pencatatan terakhir cek ----------
 
 async function ambilTerakhirCek() {

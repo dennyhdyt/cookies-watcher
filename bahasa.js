@@ -142,6 +142,17 @@ const KAMUS = {
     "c.sudahUntuk": "{n} sudah ada untuk {s}.",
     "c.tambahSaja": "{n} ditambahkan untuk {s} saja.",
 
+    // ----- Hapus cookie sesi saat browser dibuka -----
+    "set.buka": "Hapus cookie sesi saat browser dibuka",
+    "set.buka.info": "Cookie sesi login dari situs di daftar ini dihapus setiap kali browser dibuka, jadi cookie yang tercuri dari sesi sebelumnya tidak berlaku lagi. Konsekuensinya kamu harus login ulang di situs itu. Penghapusan terjadi saat browser dibuka, bukan saat ditutup.",
+    "set.buka.kosong": "Belum ada situs. Fitur ini mati sampai kamu menambahkan situs.",
+    "set.buka.status": "Terakhir dibersihkan: {w} ({n} cookie).",
+    "set.buka.belum": "Belum pernah dibersihkan.",
+    "set.buka.sekarang": "Bersihkan sekarang",
+    "set.buka.konf": "Hapus cookie sesi login dari {n} situs sekarang? Kamu akan logout dari situs itu.",
+    "set.buka.hasil": "Selesai: {n} cookie dihapus.",
+    "set.buka.ditambah": "{s} akan dibersihkan setiap browser dibuka.",
+
     // ----- Daftar putih -----
     "w.kosong": "Belum ada situs di daftar putih.",
     "w.format": "Format tidak valid. Contoh yang benar: github.com",
@@ -299,6 +310,17 @@ const KAMUS = {
     "c.tambahSemua": "{n} added for all sites.",
     "c.sudahUntuk": "{n} already exists for {s}.",
     "c.tambahSaja": "{n} added for {s} only.",
+
+    // ----- Delete session cookies when the browser opens -----
+    "set.buka": "Delete session cookies when the browser opens",
+    "set.buka.info": "Login session cookies of the sites in this list are deleted every time the browser opens, so a cookie stolen from an earlier session stops working. The trade-off is that you must sign in again on those sites. Deletion happens when the browser opens, not when it closes.",
+    "set.buka.kosong": "No sites yet. This feature stays off until you add a site.",
+    "set.buka.status": "Last cleaned: {w} ({n} cookies).",
+    "set.buka.belum": "Never cleaned yet.",
+    "set.buka.sekarang": "Clean now",
+    "set.buka.konf": "Delete login session cookies of {n} site(s) now? You will be signed out of those sites.",
+    "set.buka.hasil": "Done: {n} cookies deleted.",
+    "set.buka.ditambah": "{s} will be cleaned every time the browser opens.",
 
     // ----- Allowlist -----
     "w.kosong": "No sites in the allowlist yet.",

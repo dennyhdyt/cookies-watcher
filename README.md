@@ -28,6 +28,16 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
 
+## Hapus cookie sesi saat browser dibuka (opsional)
+
+Di tab **Pengaturan** kamu bisa memilih situs yang cookie sesi loginnya dihapus setiap browser dibuka.
+Cookie yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi, tetapi kamu harus login ulang di situs itu.
+Hanya cookie bernama sesi (sessionid, xs, dll.) yang dihapus; tema, bahasa, dan cookie lain tidak disentuh.
+Mati secara bawaan. Tombol **Bersihkan sekarang** menjalankannya langsung.
+
+Batasan: penghapusan terjadi saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
+sinyal "akan ditutup" yang andal), jadi cookie masih ada di disk selama browser mati.
+
 ## Bahasa
 
 Popup punya tombol **ID | EN** di pojok kanan atas. Pilihannya tersimpan di browser dan juga dipakai untuk

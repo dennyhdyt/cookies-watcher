@@ -1019,6 +1019,24 @@ async function tampilkanBersih() {
     ? tr("bersih.status", { w: formatWaktu(hasil.waktu), n: hasil.jumlah })
     : tr("bersih.belum");
   document.getElementById("tombolBersihkanSekarang").disabled = daftarOto.length === 0;
+
+  // Riwayat: bukti bahwa pembersihan otomatis benar-benar berjalan.
+  const kotakRiwayat = document.getElementById("riwayatBersih");
+  kotakRiwayat.textContent = "";
+  const riwayat = await ambilRiwayatBersih();
+  if (riwayat.length === 0) {
+    kotakRiwayat.textContent = tr("bersih.riwayatKosong");
+  } else {
+    const judulRiwayat = document.createElement("div");
+    judulRiwayat.textContent = tr("bersih.riwayat");
+    kotakRiwayat.append(judulRiwayat);
+    for (const r of riwayat.slice(0, 5)) {
+      const baris = document.createElement("div");
+      baris.textContent =
+        "• " + formatWaktu(r.waktu) + " · " + tr("bersih.sumber." + r.sumber) + " · " + tr("bersih.cookieDihapus", { n: r.jumlah });
+      kotakRiwayat.append(baris);
+    }
+  }
 }
 
 document.getElementById("tombolBersihkanSekarang").addEventListener("click", async () => {
@@ -1026,7 +1044,7 @@ document.getElementById("tombolBersihkanSekarang").addEventListener("click", asy
   if (daftar.length === 0) return;
   const peringatan = daftar.some((x) => x.mode === "semua") ? tr("bersih.konfSemua") : "";
   if (!confirm(tr("bersih.konf", { n: daftar.length }) + peringatan)) return;
-  const jumlah = await bersihkanCookieTerpilih();
+  const jumlah = await bersihkanCookieTerpilih("manual");
   document.getElementById("pesanBersih").textContent = tr("bersih.hasil", { n: jumlah });
   tampilkanBersih();
 });

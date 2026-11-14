@@ -42,8 +42,16 @@ tidak disentuh. Yang dibaca hanya nama cookie, bukan nilainya. Situs yang nama c
 muncul kalau namanya ditambahkan di Pengaturan → Nama cookie sesi. Tombol **Bersihkan semua sekarang** menjalankan
 seluruh daftar otomatis langsung. Fitur otomatis mati selama daftarnya kosong.
 
-Batasan: penghapusan otomatis terjadi saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
-sinyal "akan ditutup" yang andal), jadi cookie masih ada di disk selama browser mati.
+Kapan penghapusan otomatis berjalan: saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
+sinyal "akan ditutup" yang andal), jadi cookie masih ada di disk selama browser mati. Ada dua pemicu: browser mulai
+dari awal, atau jendela baru dibuka setelah **semua jendela ditutup** (browser sering tetap berjalan di latar
+belakang setelah jendelanya ditutup, dan dalam kasus itu "browser mulai" tidak pernah terjadi). Membuka jendela
+tambahan di tengah sesi tidak menghapus apa pun. Bagian **Riwayat pembersihan** di tab Bersihkan mencatat kapan
+dan karena apa pembersihan berjalan, supaya kamu bisa memastikannya.
+
+Kalau setelah dibersihkan kamu masih login: sebagian situs memakai beberapa cookie login sekaligus dan sebagian
+namanya mungkin belum dikenali. Tambahkan namanya di Pengaturan → Nama cookie sesi. Halaman yang sudah terbuka
+(misalnya tab yang dipulihkan browser) tetap terlihat login sampai dimuat ulang.
 
 ## Bahasa
 

@@ -234,15 +234,52 @@ async function aturAlarm(buatUlang) {
 chrome.runtime.onInstalled.addListener(() => aturAlarm(false));
 chrome.runtime.onStartup.addListener(() => aturAlarm(false));
 
-// Saat browser dibuka: hapus cookie sesi login situs yang kamu pilih (kalau ada).
-async function saatBrowserDibuka() {
+// ---------- Bersihkan cookie login saat browser dibuka ----------
+//
+// Ada dua pemicu, karena browser sering tetap berjalan di latar belakang setelah jendela
+// terakhir ditutup (Chrome/Edge "lanjutkan menjalankan aplikasi latar belakang", Startup boost).
+// Dalam kasus itu "browser mulai" tidak pernah terjadi, tetapi jendela baru tetap dibuat.
+//   1. onStartup: prosesnya benar-benar mulai dari awal.
+//   2. Semua jendela ditutup (onRemoved) lalu ada jendela baru (onCreated).
+// Keduanya bisa terjadi berurutan, jadi pembersihan otomatis dibatasi satu kali per 20 detik.
+
+async function jalankanBersihOtomatis(sumber) {
   try {
-    await bersihkanCookieTerpilih();
+    await chrome.storage.local.remove("jendelaTertutup");
+    if (chrome.storage.session) {
+      const sesi = await chrome.storage.session.get("bersihOtomatisTerakhir");
+      if (sesi.bersihOtomatisTerakhir && Date.now() - sesi.bersihOtomatisTerakhir < 20000) return;
+      await chrome.storage.session.set({ bersihOtomatisTerakhir: Date.now() });
+    }
+    await bersihkanCookieTerpilih(sumber);
   } catch (e) {
     // Kalau gagal, biarkan: cookie tetap ada dan bisa dibersihkan manual dari popup.
   }
 }
+
+async function saatBrowserDibuka() {
+  await jalankanBersihOtomatis("startup");
+}
 chrome.runtime.onStartup.addListener(saatBrowserDibuka);
+
+// Menandai bahwa jendela biasa terakhir sudah ditutup.
+async function tandaiJendelaTertutup() {
+  try {
+    const jendela = await chrome.windows.getAll({ windowTypes: ["normal"] });
+    if (jendela.length === 0) await chrome.storage.local.set({ jendelaTertutup: Date.now() });
+  } catch (e) {
+    // Abaikan: pemicu onStartup tetap berjalan.
+  }
+}
+
+// Jendela baru dibuat setelah semua jendela ditutup = browser "dibuka" lagi.
+async function saatJendelaDibuat() {
+  const data = await chrome.storage.local.get("jendelaTertutup");
+  if (!data.jendelaTertutup) return;
+  await jalankanBersihOtomatis("jendela");
+}
+chrome.windows.onRemoved.addListener(tandaiJendelaTertutup);
+chrome.windows.onCreated.addListener(saatJendelaDibuat);
 
 // Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
 chrome.storage.onChanged.addListener((perubahan, area) => {

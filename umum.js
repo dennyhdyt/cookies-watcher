@@ -20,6 +20,20 @@ const NAMA_COOKIE_SESI = [
   "auth_token", "token", "access_token", "li_at", "user_session",
 ];
 
+// Nama cookie login tambahan. Dipakai HANYA untuk mendeteksi dan menghapus cookie login
+// (tab Bersihkan), bukan untuk peringatan, supaya peringatan tidak jadi terlalu sering.
+// Banyak situs (misalnya Google) memakai beberapa cookie sekaligus; kalau hanya sebagian
+// dihapus, kamu bisa tetap login.
+const NAMA_COOKIE_LOGIN_TAMBAHAN = [
+  "hsid", "apisid", "sapisid", "osid",
+  "__secure-1psid", "__secure-3psid", "__secure-1papisid", "__secure-3papisid",
+  "__secure-1psidts", "__secure-3psidts",
+  "sid_tt", "sessionid_ss", "sid_guard", "uid_tt",
+  "jsessionid", "phpsessid", "connect.sid", "_session_id", "session_id",
+  "laravel_session", "remember_token", "logged_in", "__host-user_session_same_site",
+  "ds_user_id",
+];
+
 // Halaman untuk melihat dan mengakhiri sesi login di tiap situs.
 // Alamat ini bisa berubah sewaktu-waktu kalau situsnya mengubah pengaturan.
 // TikTok tidak punya halaman web yang stabil, jadi tidak disertakan.
@@ -379,6 +393,11 @@ function namaSesiUntuk(situs, pengaturan) {
   return nama;
 }
 
+// Daftar nama cookie LOGIN untuk satu situs (nama sesi + nama login tambahan).
+function namaLoginUntuk(situs, pengaturan) {
+  return namaSesiUntuk(situs, pengaturan).concat(NAMA_COOKIE_LOGIN_TAMBAHAN);
+}
+
 // Tautan halaman aktivitas login: bawaan + yang kamu atur sendiri.
 async function ambilHalamanSitus() {
   const data = await chrome.storage.local.get("halamanSitus");
@@ -408,6 +427,12 @@ async function ambilHapusSaatBuka() {
     .map((x) => (typeof x === "string" ? { situs: x, mode: "sesi" } : x))
     .filter((x) => x && typeof x.situs === "string")
     .map((x) => ({ situs: x.situs, mode: x.mode === "semua" ? "semua" : "sesi" }));
+}
+
+// Catatan 8 pembersihan terakhir: [{ waktu, sumber, jumlah }], terbaru di depan.
+async function ambilRiwayatBersih() {
+  const data = await chrome.storage.local.get("riwayatBersih");
+  return data.riwayatBersih || [];
 }
 
 async function ambilHasilBersih() {
@@ -440,7 +465,7 @@ async function cariSitusCookieLogin() {
   for (const cookie of semua) {
     const situs = domainUtama(cookie.domain);
     if (!situs || terlaluUmum(situs)) continue;
-    if (!namaSesiUntuk(situs, pengaturan).includes(cookie.name.toLowerCase())) continue;
+    if (!namaLoginUntuk(situs, pengaturan).includes(cookie.name.toLowerCase())) continue;
     jumlahPerSitus[situs] = (jumlahPerSitus[situs] || 0) + 1;
   }
   return Object.keys(jumlahPerSitus)
@@ -453,7 +478,7 @@ async function cariSitusCookieLogin() {
 // mode "semua" menghapus semua cookie situs itu. Mengembalikan jumlah yang dihapus.
 async function hapusCookieSitus(situs, mode, pengaturan) {
   if (terlaluUmum(situs)) return 0; // pengaman kalau data tersimpan rusak
-  const nama = namaSesiUntuk(situs, pengaturan);
+  const nama = namaLoginUntuk(situs, pengaturan);
   const semua = await chrome.cookies.getAll({ domain: situs });
   let jumlah = 0;
   for (const cookie of semua) {
@@ -466,7 +491,8 @@ async function hapusCookieSitus(situs, mode, pengaturan) {
 }
 
 // Membersihkan semua situs di daftar "hapus saat dibuka". Mengembalikan jumlah cookie yang dihapus.
-async function bersihkanCookieTerpilih() {
+// "sumber" dicatat di riwayat: "startup", "jendela", atau "manual".
+async function bersihkanCookieTerpilih(sumber) {
   const daftar = await ambilHapusSaatBuka();
   if (daftar.length === 0) return 0;
 
@@ -475,7 +501,13 @@ async function bersihkanCookieTerpilih() {
   for (const { situs, mode } of daftar) {
     jumlah += await hapusCookieSitus(situs, mode, pengaturan);
   }
-  await chrome.storage.local.set({ hasilBersih: { waktu: Date.now(), jumlah: jumlah } });
+  const waktu = Date.now();
+  const riwayat = await ambilRiwayatBersih();
+  riwayat.unshift({ waktu: waktu, sumber: sumber || "manual", jumlah: jumlah });
+  await chrome.storage.local.set({
+    hasilBersih: { waktu: waktu, jumlah: jumlah },
+    riwayatBersih: riwayat.slice(0, 8),
+  });
   return jumlah;
 }
 

@@ -96,28 +96,6 @@ function rapikanNamaSitus(teks) {
   return t;
 }
 
-// Merapikan tautan. Hasilnya "" (dikosongkan), null (tidak valid), atau alamat lengkap.
-// Hanya https yang diterima supaya tidak membuka alamat berbahaya.
-function rapikanTautan(teks) {
-  const t = teks.trim();
-  if (!t) return "";
-  try {
-    const url = new URL(t);
-    if (url.protocol !== "https:") return null;
-    return url.href;
-  } catch (e) {
-    return null;
-  }
-}
-
-// Nama cookie hanya boleh huruf, angka, garis bawah, titik, dan strip.
-// Hasilnya huruf kecil karena pencocokan dilakukan tanpa membedakan besar-kecil.
-function rapikanNamaCookie(teks) {
-  const t = teks.trim().toLowerCase();
-  if (!/^[a-z0-9_.-]{1,60}$/.test(t)) return null;
-  return t;
-}
-
 async function setBadge(jumlah) {
   await chrome.action.setBadgeText({ text: jumlah ? String(jumlah) : "" });
 }
@@ -474,241 +452,6 @@ async function tampilkanEkstensiTepercaya() {
     );
   }
 }
-
-// ---------- Bagian 5: Situs yang dipantau ----------
-
-async function tampilkanSitusDipantau() {
-  const wadah = document.getElementById("daftarDipantau");
-  wadah.textContent = "";
-
-  const [tambahan, halaman] = await Promise.all([ambilSitusTambahan(), ambilHalamanSitus()]);
-
-  // Situs bawaan: tidak bisa dihapus
-  for (const situs of SITUS_BAWAAN) {
-    wadah.append(
-      buatChip(situs, halaman[situs] ? tr("d.bawaan") : tr("d.bawaanTanpa"), [])
-    );
-  }
-
-  // Situs tambahan dari kamu: bisa dihapus
-  for (const situs of tambahan) {
-    wadah.append(
-      buatChip(
-        situs,
-        halaman[situs] ? tr("d.ada") : tr("d.tanpa"),
-        [buatTombol(tr("d.hapus"), "", () => hapusSitusTambahan(situs))]
-      )
-    );
-  }
-}
-
-// Menghapus situs tambahan beserta semua pengaturan yang terkait dengannya.
-async function hapusSitusTambahan(situs) {
-  const data = await chrome.storage.local.get([
-    "situsTambahan", "halamanSitus", "namaCookiePerSitus",
-  ]);
-
-  const halaman = data.halamanSitus || {};
-  const nama = data.namaCookiePerSitus || {};
-  delete halaman[situs];
-  delete nama[situs];
-
-  await chrome.storage.local.set({
-    situsTambahan: (data.situsTambahan || []).filter((s) => s !== situs),
-    halamanSitus: halaman,
-    namaCookiePerSitus: nama,
-  });
-  segarkanDaftarSitus();
-}
-
-// Dipanggil setiap daftar situs berubah, supaya semua bagian ikut diperbarui.
-function segarkanDaftarSitus() {
-  tampilkanSitusDipantau();
-  tampilkanPilihanSitus();
-  tampilkanNamaSesi();
-  tampilkanPeringatan();
-}
-
-async function simpanSitusDipantau() {
-  const inputSitus = document.getElementById("inputDipantau");
-  const inputTautan = document.getElementById("inputTautan");
-  const pesan = document.getElementById("pesanDipantau");
-
-  const situs = rapikanNamaSitus(inputSitus.value);
-  if (!situs) {
-    pesan.textContent = tr("d.formatSitus");
-    return;
-  }
-
-  const tautan = rapikanTautan(inputTautan.value);
-  if (tautan === null) {
-    pesan.textContent = tr("d.formatTautan");
-    return;
-  }
-
-  // Tautan yang mengarah ke host lain bisa jadi salah ketik atau tautan penipuan,
-  // jadi minta konfirmasi dulu. (Beberapa situs memang memakai host lain, misalnya
-  // YouTube memakai myaccount.google.com, jadi tidak diblokir sepenuhnya.)
-  if (tautan) {
-    const host = new URL(tautan).hostname;
-    if (
-      !cocokDomain(host, situs) &&
-      !confirm(tr("d.konfHost", { h: host, s: situs }))
-    ) {
-      return;
-    }
-  }
-
-  const tambahan = await ambilSitusTambahan();
-  const sudahAda = SITUS_BAWAAN.includes(situs) || tambahan.includes(situs);
-
-  if (sudahAda && !tautan) {
-    pesan.textContent = tr("d.sudahAda", { s: situs });
-    return;
-  }
-
-  if (!sudahAda) {
-    tambahan.push(situs);
-    await chrome.storage.local.set({ situsTambahan: tambahan });
-  }
-
-  if (tautan) {
-    const data = await chrome.storage.local.get("halamanSitus");
-    const halaman = data.halamanSitus || {};
-    halaman[situs] = tautan;
-    await chrome.storage.local.set({ halamanSitus: halaman });
-  }
-
-  pesan.textContent = sudahAda
-    ? tr("d.tautanUpdate", { s: situs })
-    : tautan
-      ? tr("d.ditambahTautan", { s: situs })
-      : tr("d.ditambah", { s: situs });
-  inputSitus.value = "";
-  inputTautan.value = "";
-  segarkanDaftarSitus();
-}
-
-document.getElementById("tombolTambahDipantau").addEventListener("click", simpanSitusDipantau);
-for (const id of ["inputDipantau", "inputTautan"]) {
-  document.getElementById(id).addEventListener("keydown", (e) => {
-    if (e.key === "Enter") simpanSitusDipantau();
-  });
-}
-
-// ---------- Bagian 6: Nama cookie sesi (semua situs atau per situs) ----------
-
-// Mengisi pilihan cakupan: "Semua situs" + tiap situs yang dipantau.
-async function tampilkanPilihanSitus() {
-  const pilih = document.getElementById("pilihSitusNama");
-  const terpilih = pilih.value;
-  pilih.textContent = "";
-
-  const semua = document.createElement("option");
-  semua.value = "";
-  semua.textContent = tr("c.semuaSitus");
-  pilih.append(semua);
-
-  for (const situs of await ambilSitusDipantau()) {
-    const opsi = document.createElement("option");
-    opsi.value = situs;
-    opsi.textContent = situs;
-    pilih.append(opsi);
-  }
-
-  // Pertahankan pilihan sebelumnya kalau masih ada.
-  if ([...pilih.options].some((o) => o.value === terpilih)) pilih.value = terpilih;
-}
-
-async function tampilkanNamaSesi() {
-  const wadah = document.getElementById("daftarNamaSesi");
-  wadah.textContent = "";
-
-  const pengaturan = await ambilPengaturanNama();
-  let jumlah = 0;
-
-  for (const nama of pengaturan.global) {
-    jumlah++;
-    wadah.append(
-      buatChip(nama, tr("c.chipSemua"), [
-        buatTombol(tr("d.hapus"), "", async () => {
-          const data = await ambilPengaturanNama();
-          await chrome.storage.local.set({
-            namaCookieTambahan: data.global.filter((n) => n !== nama),
-          });
-          tampilkanNamaSesi();
-        }),
-      ])
-    );
-  }
-
-  for (const [situs, daftar] of Object.entries(pengaturan.perSitus)) {
-    for (const nama of daftar) {
-      jumlah++;
-      wadah.append(
-        buatChip(nama, tr("c.chipHanya", { s: situs }), [
-          buatTombol(tr("d.hapus"), "", async () => {
-            const data = await ambilPengaturanNama();
-            const sisa = (data.perSitus[situs] || []).filter((n) => n !== nama);
-            if (sisa.length > 0) data.perSitus[situs] = sisa;
-            else delete data.perSitus[situs];
-            await chrome.storage.local.set({ namaCookiePerSitus: data.perSitus });
-            tampilkanNamaSesi();
-          }),
-        ])
-      );
-    }
-  }
-
-  if (jumlah === 0) wadah.append(buatKosong(tr("c.kosong")));
-}
-
-async function tambahNamaSesi() {
-  const input = document.getElementById("inputNamaSesi");
-  const pesan = document.getElementById("pesanNamaSesi");
-  const situs = document.getElementById("pilihSitusNama").value; // "" = semua situs
-
-  const nama = rapikanNamaCookie(input.value);
-  if (!nama) {
-    pesan.textContent = tr("c.tidakValid");
-    return;
-  }
-
-  const pengaturan = await ambilPengaturanNama();
-
-  if (NAMA_COOKIE_SESI.includes(nama)) {
-    pesan.textContent = tr("c.bawaan", { n: nama });
-    return;
-  }
-  if (pengaturan.global.includes(nama)) {
-    pesan.textContent = tr("c.sudahSemua", { n: nama });
-    return;
-  }
-
-  if (!situs) {
-    pengaturan.global.push(nama);
-    await chrome.storage.local.set({ namaCookieTambahan: pengaturan.global });
-    pesan.textContent = tr("c.tambahSemua", { n: nama });
-  } else {
-    const daftar = pengaturan.perSitus[situs] || [];
-    if (daftar.includes(nama)) {
-      pesan.textContent = tr("c.sudahUntuk", { n: nama, s: situs });
-      return;
-    }
-    daftar.push(nama);
-    pengaturan.perSitus[situs] = daftar;
-    await chrome.storage.local.set({ namaCookiePerSitus: pengaturan.perSitus });
-    pesan.textContent = tr("c.tambahSaja", { n: nama, s: situs });
-  }
-
-  input.value = "";
-  tampilkanNamaSesi();
-}
-
-document.getElementById("tombolTambahNamaSesi").addEventListener("click", tambahNamaSesi);
-document.getElementById("inputNamaSesi").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") tambahNamaSesi();
-});
 
 // ---------- Bagian 7: Daftar putih ----------
 
@@ -1067,9 +810,6 @@ function renderSemua() {
   tampilkanStatus();
   tampilkanPeringatan();
   tampilkanEkstensi();
-  tampilkanSitusDipantau();
-  tampilkanPilihanSitus();
-  tampilkanNamaSesi();
   tampilkanBersih();
   tampilkanDaftarPutih();
 }
@@ -1079,7 +819,7 @@ for (const tombol of document.querySelectorAll("[data-bahasa]")) {
     if (tombol.dataset.bahasa === bahasaAktif) return;
     await simpanBahasa(tombol.dataset.bahasa);
     // Pesan dan hasil pemindaian lama masih memakai bahasa sebelumnya, jadi dikosongkan.
-    for (const id of ["pesanDipantau", "pesanNamaSesi", "pesanBersih", "pesanDaftarPutih", "hasilPindai"]) {
+    for (const id of ["pesanBersih", "pesanDaftarPutih", "hasilPindai"]) {
       document.getElementById(id).textContent = "";
     }
     renderSemua();

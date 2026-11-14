@@ -365,23 +365,14 @@ async function ambilDaftarPutih() {
   return data.daftarPutih || [];
 }
 
-async function ambilSitusTambahan() {
-  const data = await chrome.storage.local.get("situsTambahan");
-  return data.situsTambahan || [];
-}
-
-// Situs bawaan + situs tambahan dari kamu.
+// Situs yang dipantau: daftar tetap (SITUS_BAWAAN).
 async function ambilSitusDipantau() {
-  return SITUS_BAWAAN.concat(await ambilSitusTambahan());
+  return SITUS_BAWAAN.slice();
 }
 
-// Nama cookie sesi tambahan: untuk semua situs (global) dan per situs.
+// Pengaturan nama cookie sesi: memakai nama bawaan saja, tanpa tambahan dari pengguna.
 async function ambilPengaturanNama() {
-  const data = await chrome.storage.local.get(["namaCookieTambahan", "namaCookiePerSitus"]);
-  return {
-    global: data.namaCookieTambahan || [],
-    perSitus: data.namaCookiePerSitus || {},
-  };
+  return { global: [], perSitus: {} };
 }
 
 // Daftar nama cookie sesi yang berlaku untuk satu situs.
@@ -398,10 +389,9 @@ function namaLoginUntuk(situs, pengaturan) {
   return namaSesiUntuk(situs, pengaturan).concat(NAMA_COOKIE_LOGIN_TAMBAHAN);
 }
 
-// Tautan halaman aktivitas login: bawaan + yang kamu atur sendiri.
+// Tautan halaman "keluar dari semua perangkat" per situs (tetap, dari HALAMAN_BAWAAN).
 async function ambilHalamanSitus() {
-  const data = await chrome.storage.local.get("halamanSitus");
-  return Object.assign({}, HALAMAN_BAWAAN, data.halamanSitus || {});
+  return Object.assign({}, HALAMAN_BAWAAN);
 }
 
 // ---------- Hapus cookie sesi saat browser dibuka ----------

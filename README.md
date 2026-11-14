@@ -19,9 +19,9 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 |------|--------|
 | `manifest.json` | "KTP" ekstensi: nama, izin yang diminta, file yang dipakai |
 | `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, pembersihan cookie login, dan tab ditutup |
-| `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik, dibagi dalam 5 tab: Peringatan, Pemindaian, Ekstensi, Login, Pengaturan (angka merah di tab Peringatan = jumlah peringatan) |
+| `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik, dibagi dalam 5 tab: Peringatan, Pemindaian, Ekstensi, Bersihkan, Pengaturan (angka merah di tab Peringatan = jumlah peringatan) |
 | `bahasa.js` | Kamus teks Indonesia dan Inggris, plus pemilihan bahasa. Dimuat paling awal oleh `background.js` dan popup |
-| `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
+| `umum.js` | Data dan fungsi bersama (daftar situs tetap, nama cookie sesi bawaan, deteksi domain mirip, penyimpanan). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
 | `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, bersihkan cookie, daftar putih |
 | `periksa-keamanan.js` | Alat bantu: `node periksa-keamanan.js` memeriksa izin dan melarang jaringan, eval, pembacaan nilai cookie, dll. |
@@ -47,7 +47,7 @@ Situs di tab yang sedang dibuka muncul paling atas. Untuk tiap situs ada dua tom
 
 Yang dihapus hanya cookie bernama sesi (sessionid, xs, dll.), termasuk di subdomain. Tema, bahasa, dan cookie lain
 tidak disentuh. Yang dibaca hanya nama cookie, bukan nilainya. Situs yang nama cookie loginnya tidak dikenal baru
-muncul kalau namanya ditambahkan di Pengaturan → Nama cookie sesi. Tombol **Bersihkan semua sekarang** menjalankan
+muncul kalau namanya ada di daftar nama login bawaan. Tombol **Bersihkan semua sekarang** menjalankan
 seluruh daftar otomatis langsung. Fitur otomatis mati selama daftarnya kosong.
 
 Kapan penghapusan otomatis berjalan: saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
@@ -58,7 +58,7 @@ tambahan di tengah sesi tidak menghapus apa pun. Bagian **Riwayat pembersihan** 
 dan karena apa pembersihan berjalan, supaya kamu bisa memastikannya.
 
 Kalau setelah dibersihkan kamu masih login: sebagian situs memakai beberapa cookie login sekaligus dan sebagian
-namanya mungkin belum dikenali. Tambahkan namanya di Pengaturan → Nama cookie sesi. Halaman yang sudah terbuka
+namanya mungkin belum dikenali. Situs seperti itu belum bisa dideteksi. Halaman yang sudah terbuka
 (misalnya tab yang dipulihkan browser) tetap terlihat login sampai dimuat ulang.
 
 ## Bahasa
@@ -77,8 +77,6 @@ dan `LOCALE`, dan satu tombol di `popup.html`.
 - **Perlu diperhatikan:** alamat IP publik (alamat jaringan lokal seperti 192.168.x.x tidak dihitung) dan domain punycode biasa (misalnya situs berhuruf Mandarin atau Rusia yang sah) hanya muncul di pemindaian, **tanpa notifikasi**, karena situs sah juga kadang begini. Tombol **Percayai** memasukkannya ke daftar putih.
 
 - **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang bersifat **opsional**: mati secara bawaan, dan baru aktif kalau kamu menekan tombol "Aktifkan pemeriksaan ekstensi" di popup (browser akan meminta persetujuan). Bisa dimatikan lagi kapan saja dengan tombol yang sama.
-- **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri, dengan tautan "keluar dari semua perangkat" yang opsional (dipakai tombol di peringatan) (harus https; kalau mengarah ke host lain, kamu diminta mengonfirmasi dulu). Menyimpan ulang situs yang sama memperbarui tautannya. Menghapus situs tambahan juga membersihkan tautan dan nama cookie miliknya.
-- **Nama cookie sesi:** tambahkan nama cookie sesi sendiri, untuk **semua situs** atau **satu situs saja** (pilih lewat kotak pilihan). Berlaku untuk pemantauan dan pemindaian. Namanya bisa dicari lewat DevTools: F12, tab Application, Cookies.
 - **Keluar dari semua perangkat:** peringatan cookie sesi punya tombol yang membuka halaman sesi/keamanan situs terkait (Facebook, Instagram, Google/YouTube, X, LinkedIn, GitHub, dan situs tambahan yang kamu beri tautan). Alamat halaman bisa berubah kalau situsnya mengubah pengaturan.
 - **Daftar putih:** situs yang kamu percaya tidak memicu peringatan dan tidak muncul di hasil pemindaian. Tambahkan lewat kolom input di popup, atau tombol "Percayai situs ini" pada peringatan. Subdomain ikut dihitung (menambah `google.com` juga mencakup `accounts.google.com`).
 

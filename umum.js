@@ -421,10 +421,51 @@ function terlaluUmum(situs) {
   return bagian.length < 2 || (bagian.length === 2 && SLD_UMUM.includes(bagian[0]));
 }
 
-// Menghapus cookie dari semua situs di daftar "hapus saat dibuka".
+// Domain utama sebuah situs. "www.facebook.com" -> "facebook.com", "m.tokokita.co.id" -> "tokokita.co.id".
+// Mengembalikan null untuk alamat IP, localhost, dan bentuk lain yang bukan nama situs.
+function domainUtama(domain) {
+  const d = bersihkanDomain(domain).toLowerCase();
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) return null;
+  const bagian = d.split(".");
+  return bagian.slice(indeksNamaUtama(bagian)).join(".");
+}
+
+// Mencari situs yang punya cookie login di browser ini (nama cookie ada di daftar nama sesi).
+// Yang dibaca hanya NAMA cookie, bukan nilainya.
+// Hasil: [{ situs, jumlah }] diurutkan dari abjad.
+async function cariSitusCookieLogin() {
+  const pengaturan = await ambilPengaturanNama();
+  const semua = await chrome.cookies.getAll({});
+  const jumlahPerSitus = {};
+  for (const cookie of semua) {
+    const situs = domainUtama(cookie.domain);
+    if (!situs || terlaluUmum(situs)) continue;
+    if (!namaSesiUntuk(situs, pengaturan).includes(cookie.name.toLowerCase())) continue;
+    jumlahPerSitus[situs] = (jumlahPerSitus[situs] || 0) + 1;
+  }
+  return Object.keys(jumlahPerSitus)
+    .sort()
+    .map((situs) => ({ situs: situs, jumlah: jumlahPerSitus[situs] }));
+}
+
+// Menghapus cookie satu situs (termasuk subdomain).
 // Mode "sesi" hanya menghapus cookie yang namanya ada di daftar nama sesi;
-// mode "semua" menghapus semua cookie situs itu.
-// Mengembalikan jumlah cookie yang dihapus.
+// mode "semua" menghapus semua cookie situs itu. Mengembalikan jumlah yang dihapus.
+async function hapusCookieSitus(situs, mode, pengaturan) {
+  if (terlaluUmum(situs)) return 0; // pengaman kalau data tersimpan rusak
+  const nama = namaSesiUntuk(situs, pengaturan);
+  const semua = await chrome.cookies.getAll({ domain: situs });
+  let jumlah = 0;
+  for (const cookie of semua) {
+    if (!cocokDomain(cookie.domain, situs)) continue;
+    if (mode === "sesi" && !nama.includes(cookie.name.toLowerCase())) continue;
+    await hapusCookie(cookie);
+    jumlah++;
+  }
+  return jumlah;
+}
+
+// Membersihkan semua situs di daftar "hapus saat dibuka". Mengembalikan jumlah cookie yang dihapus.
 async function bersihkanCookieTerpilih() {
   const daftar = await ambilHapusSaatBuka();
   if (daftar.length === 0) return 0;
@@ -432,15 +473,7 @@ async function bersihkanCookieTerpilih() {
   const pengaturan = await ambilPengaturanNama();
   let jumlah = 0;
   for (const { situs, mode } of daftar) {
-    if (terlaluUmum(situs)) continue; // pengaman kalau data tersimpan rusak
-    const nama = namaSesiUntuk(situs, pengaturan);
-    const semua = await chrome.cookies.getAll({ domain: situs });
-    for (const cookie of semua) {
-      if (!cocokDomain(cookie.domain, situs)) continue;
-      if (mode === "sesi" && !nama.includes(cookie.name.toLowerCase())) continue;
-      await hapusCookie(cookie);
-      jumlah++;
-    }
+    jumlah += await hapusCookieSitus(situs, mode, pengaturan);
   }
   await chrome.storage.local.set({ hasilBersih: { waktu: Date.now(), jumlah: jumlah } });
   return jumlah;

@@ -914,16 +914,95 @@ tombolTab.forEach((t, i) => {
   pilihTab(awal);
 }
 
-// ---------- Tab Bersihkan: hapus cookie saat browser dibuka ----------
+// ---------- Tab Bersihkan: cookie login terdeteksi otomatis ----------
 
 const namaMode = () => ({ sesi: tr("bersih.mode.sesi"), semua: tr("bersih.mode.semua") });
 
+// Situs dari tab yang sedang dibuka (null kalau bukan halaman web biasa).
+async function ambilSitusTabAktif() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab || !tab.url) return null;
+    const alamat = new URL(tab.url);
+    if (alamat.protocol !== "https:" && alamat.protocol !== "http:") return null;
+    return domainUtama(alamat.hostname);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Satu baris situs yang terdeteksi punya cookie login.
+function barisSitusLogin(situs, jumlah, sudahOtomatis) {
+  const tombol = [];
+  if (sudahOtomatis) {
+    const label = document.createElement("span");
+    label.className = "bawaan";
+    label.textContent = tr("bersih.otomatis");
+    tombol.push(label);
+  } else {
+    tombol.push(
+      buatTombol(tr("bersih.tambah"), "percaya", async () => {
+        const daftar = await ambilHapusSaatBuka();
+        if (!daftar.some((x) => x.situs === situs)) {
+          await chrome.storage.local.set({ hapusSaatBuka: daftar.concat({ situs: situs, mode: "sesi" }) });
+        }
+        document.getElementById("pesanBersih").textContent = tr("bersih.ditambah", { s: situs });
+        tampilkanBersih();
+      })
+    );
+  }
+  tombol.push(
+    buatTombol(tr("bersih.hapusSekarang"), "hapus", async () => {
+      if (!confirm(tr("bersih.konfSatu", { n: jumlah, s: situs }))) return;
+      const dihapus = await hapusCookieSitus(situs, "sesi", await ambilPengaturanNama());
+      document.getElementById("pesanBersih").textContent = tr("bersih.hasilSatu", { s: situs, n: dihapus });
+      tampilkanBersih();
+    })
+  );
+  return buatChip(situs, tr("bersih.cookieN", { n: jumlah }), tombol);
+}
+
 async function tampilkanBersih() {
+  const [daftarOto, terdeteksi, situsTab] = await Promise.all([
+    ambilHapusSaatBuka(),
+    cariSitusCookieLogin(),
+    ambilSitusTabAktif(),
+  ]);
+  const otomatis = new Set(daftarOto.map((x) => x.situs));
+
+  // 1. Situs di tab yang sedang dibuka, paling atas.
+  const kotakTab = document.getElementById("tabIniBersih");
+  kotakTab.textContent = "";
+  let lewati = null;
+  if (situsTab) {
+    const cocok = terdeteksi.find((x) => x.situs === situsTab);
+    const judul = document.createElement("h3");
+    judul.textContent = tr("bersih.tabIni");
+    kotakTab.append(judul);
+    if (cocok) {
+      const baris = barisSitusLogin(cocok.situs, cocok.jumlah, otomatis.has(cocok.situs));
+      baris.classList.add("sorot");
+      kotakTab.append(baris);
+      lewati = cocok.situs;
+    } else {
+      kotakTab.append(buatKosong(tr("bersih.tabIniKosong", { s: situsTab })));
+    }
+  }
+
+  // 2. Semua situs lain yang cookie login-nya terdeteksi.
+  const wadahDeteksi = document.getElementById("daftarDeteksi");
+  wadahDeteksi.textContent = "";
+  const lain = terdeteksi.filter((x) => x.situs !== lewati);
+  if (terdeteksi.length === 0) wadahDeteksi.append(buatKosong(tr("bersih.deteksiKosong")));
+  for (const { situs, jumlah } of lain) {
+    wadahDeteksi.append(barisSitusLogin(situs, jumlah, otomatis.has(situs)));
+  }
+
+  // 3. Daftar yang dibersihkan otomatis tiap browser dibuka.
   const wadah = document.getElementById("daftarBersih");
   wadah.textContent = "";
-  const daftar = await ambilHapusSaatBuka();
-  if (daftar.length === 0) wadah.append(buatKosong(tr("bersih.kosong")));
-  for (const { situs, mode } of daftar) {
+  if (daftarOto.length === 0) wadah.append(buatKosong(tr("bersih.kosong")));
+  for (const { situs, mode } of daftarOto) {
     wadah.append(
       buatChip(situs, namaMode()[mode], [
         buatTombol(tr("w.keluarkan"), "", async () => {
@@ -939,45 +1018,8 @@ async function tampilkanBersih() {
   document.getElementById("statusBersih").textContent = hasil
     ? tr("bersih.status", { w: formatWaktu(hasil.waktu), n: hasil.jumlah })
     : tr("bersih.belum");
-  document.getElementById("tombolBersihkanSekarang").disabled = daftar.length === 0;
+  document.getElementById("tombolBersihkanSekarang").disabled = daftarOto.length === 0;
 }
-
-async function tambahBersih() {
-  const input = document.getElementById("inputBersih");
-  const pesan = document.getElementById("pesanBersih");
-  const mode = document.getElementById("pilihModeBersih").value;
-
-  const situs = rapikanNamaSitus(input.value);
-  if (!situs) {
-    pesan.textContent = tr("bersih.format");
-    return;
-  }
-  if (terlaluUmum(situs)) {
-    pesan.textContent = tr("bersih.terlaluUmum", { s: situs });
-    return;
-  }
-
-  const daftar = await ambilHapusSaatBuka();
-  const ada = daftar.find((x) => x.situs === situs);
-  if (ada && ada.mode === mode) {
-    pesan.textContent = tr("d.sudahAda", { s: situs });
-    return;
-  }
-  if (mode === "semua" && !confirm(tr("bersih.konfTambahSemua", { s: situs }))) return;
-
-  const baru = daftar.filter((x) => x.situs !== situs).concat({ situs: situs, mode: mode });
-  await chrome.storage.local.set({ hapusSaatBuka: baru });
-  pesan.textContent = ada
-    ? tr("bersih.diubah", { s: situs, m: namaMode()[mode] })
-    : tr("bersih.ditambah", { s: situs, m: namaMode()[mode] });
-  input.value = "";
-  tampilkanBersih();
-}
-
-document.getElementById("tombolTambahBersih").addEventListener("click", tambahBersih);
-document.getElementById("inputBersih").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") tambahBersih();
-});
 
 document.getElementById("tombolBersihkanSekarang").addEventListener("click", async () => {
   const daftar = await ambilHapusSaatBuka();

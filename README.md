@@ -28,20 +28,21 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
 
-## Tab Bersihkan: hapus cookie saat browser dibuka (opsional)
+## Tab Bersihkan: cookie login terdeteksi otomatis (opsional)
 
-Di tab **Bersihkan** kamu bisa mengetik situs mana saja (boleh alamat lengkap, tidak harus yang ada di daftar bawaan)
-yang cookie-nya dihapus setiap browser dibuka. Cookie yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi,
-tetapi kamu harus login ulang di situs itu. Tiap situs punya dua pilihan mode:
+Tab **Bersihkan** menampilkan situs yang kamu kunjungi dan punya cookie login, tanpa perlu mengetik apa pun.
+Situs di tab yang sedang dibuka muncul paling atas. Untuk tiap situs ada dua tombol:
 
-- **Cookie sesi login saja:** hanya cookie bernama sesi (sessionid, xs, dll.). Tema, bahasa, dan cookie lain tidak
-  disentuh. Untuk situs yang nama cookie sesinya tidak dikenal, tambahkan namanya di Pengaturan, atau pakai mode berikut.
-- **Semua cookie situs:** semua cookie situs itu, termasuk subdomainnya.
+- **Tambahkan:** masukkan situs ke daftar yang cookie login-nya dihapus otomatis setiap browser dibuka. Cookie
+  yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi, tetapi kamu harus login ulang di situs itu.
+- **Hapus sekarang:** hapus cookie login situs itu saat itu juga (misalnya setelah selesai berkunjung).
 
-Nama yang terlalu umum (misalnya `co.id` atau `com`) ditolak karena akan mencakup banyak situs. Fitur ini mati secara
-bawaan. Tombol **Bersihkan sekarang** menjalankannya langsung.
+Yang dihapus hanya cookie bernama sesi (sessionid, xs, dll.), termasuk di subdomain. Tema, bahasa, dan cookie lain
+tidak disentuh. Yang dibaca hanya nama cookie, bukan nilainya. Situs yang nama cookie loginnya tidak dikenal baru
+muncul kalau namanya ditambahkan di Pengaturan → Nama cookie sesi. Tombol **Bersihkan semua sekarang** menjalankan
+seluruh daftar otomatis langsung. Fitur otomatis mati selama daftarnya kosong.
 
-Batasan: penghapusan terjadi saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
+Batasan: penghapusan otomatis terjadi saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
 sinyal "akan ditutup" yang andal), jadi cookie masih ada di disk selama browser mati.
 
 ## Bahasa

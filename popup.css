@@ -294,3 +294,20 @@ select.lebar {
   min-width: 0;
   max-width: none;
 }
+
+/* ---------- Tab Bersihkan ---------- */
+
+h3 {
+  font-size: 12px;
+  margin: 10px 0 4px;
+  color: #3c4043;
+}
+
+.chip.sorot {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.chip .aksi .bawaan {
+  white-space: nowrap;
+}

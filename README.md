@@ -130,6 +130,12 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 - **Saat tab ditutup**: tombol di tiap situs yang terdeteksi. Situs yang dipilih dihapus cookie login-nya saat tab terakhir situs itu ditutup (tidak dihapus kalau masih ada tab lain dari situs yang sama). Hanya situs yang kamu pilih yang dipantau; ekstensi mencatat nama situsnya (bukan alamat lengkap) di memori sesi, hilang saat browser ditutup. Tidak ada izin baru: alamat tab dibaca lewat izin situs yang sudah ada, bukan izin "tabs".
 - Batas: kalau seluruh browser ditutup sekaligus, penghapusan saat tab ditutup bisa tidak sempat berjalan. Tambahkan situs yang sama ke daftar "saat browser dibuka" supaya pasti.
 
+## Ekstensi yang dipasang program lain
+
+Di tab Ekstensi (setelah izin opsional `management` kamu aktifkan), ekstensi lain ditandai juga kalau: **dipasang oleh program lain** di komputer (`sideload`, jalur yang dipakai software Windows), **dipasang lewat kebijakan sistem** (`admin`, registry/Group Policy), atau **bisa berkomunikasi dengan program di komputer** (`nativeMessaging`), selain yang berizin cookies atau lalu lintas web. Notifikasi muncul saat ekstensi seperti itu baru dipasang atau diaktifkan.
+
+Batas yang jujur: ekstensi browser tidak bisa melihat program atau service Windows. Yang terlihat hanya jejaknya di browser (ekstensi yang mereka selipkan). Situs web juga tidak bisa membaca cookie situs lain; yang bisa membaca cookie semua situs adalah ekstensi, dan itulah yang dipantau di sini. Ekstensi ini tidak memasang skrip di halaman web, jadi tidak bisa melihat iklan atau skrip yang membaca cookie di dalam halaman (itu sengaja, supaya permukaan serangannya kecil).
+
 ## Tes otomatis
 
 Jalankan `node tests/jalankan.js` (tanpa browser, tanpa instalasi). Tes ini juga berjalan otomatis di GitHub Actions setiap ada perubahan ke `main` atau pull request, bersama `periksa-keamanan.js`. Folder `tests` dan `.github` tidak ikut masuk ke zip rilis.

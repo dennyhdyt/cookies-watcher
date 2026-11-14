@@ -27,6 +27,22 @@ function periksaEkstensi(info) {
   const alasan = [];
   let tinggi = false;
 
+  // Cara ekstensi masuk ke browser. "sideload" = dipasang oleh program lain di komputer
+  // (lewat berkas/registry, bukan dari toko resmi); "admin" = dipasang lewat kebijakan
+  // sistem (Group Policy/registry di Windows). Keduanya bukan pilihanmu sendiri.
+  if (info.installType === "sideload") {
+    alasan.push(tr("e.sideload"));
+    tinggi = true;
+  } else if (info.installType === "admin") {
+    alasan.push(tr("e.admin"));
+    tinggi = true;
+  }
+
+  // Ekstensi yang bisa bicara dengan program di komputer (jembatan ke aplikasi desktop).
+  if (izin.includes("nativeMessaging")) {
+    alasan.push(tr("e.native"));
+  }
+
   if (izin.includes("cookies")) {
     if (semuaSitus) {
       alasan.push(tr("e.semua"));

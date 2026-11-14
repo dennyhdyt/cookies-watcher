@@ -86,7 +86,7 @@ const KAMUS = {
     "x.ditolak": "Izin tidak diberikan, jadi pemeriksaan ekstensi tetap mati.",
     "x.memeriksa": "Memeriksa...",
     "x.gagalBaca": "Tidak bisa membaca daftar ekstensi.",
-    "x.kosong": "Tidak ada ekstensi lain yang berizin cookies. Bagus!",
+    "x.kosong": "Tidak ada ekstensi lain yang mencurigakan (izin cookies, lalu lintas web, dipasang program lain, atau jembatan ke aplikasi). Bagus!",
     "x.tinggi": "risiko tinggi",
     "x.sedang": "risiko sedang",
     "x.nonaktif": "Nonaktifkan",
@@ -99,6 +99,9 @@ const KAMUS = {
     "e.semua": "bisa membaca dan mengubah cookies di SEMUA situs",
     "e.tertentu": "punya izin cookies (untuk situs tertentu)",
     "e.lalulintas": "bisa melihat semua lalu lintas web, termasuk cookie yang terkirim",
+    "e.sideload": "dipasang oleh program lain di komputermu (bukan dari toko resmi, bukan lewat kamu)",
+    "e.admin": "dipasang lewat kebijakan sistem (registry/Group Policy), bukan olehmu",
+    "e.native": "bisa berkomunikasi dengan program di komputermu (nativeMessaging)",
 
     // ----- Login, pengingat, notifikasi -----
     "l.dicek": "terakhir dicek: {w}",
@@ -304,7 +307,7 @@ const KAMUS = {
     "x.ditolak": "Permission was not granted, so extension checking stays off.",
     "x.memeriksa": "Checking...",
     "x.gagalBaca": "Could not read the extension list.",
-    "x.kosong": "No other extensions have cookie access. All good!",
+    "x.kosong": "No other suspicious extensions (cookie access, web traffic, installed by another program, or bridge to desktop apps). All good!",
     "x.tinggi": "high risk",
     "x.sedang": "medium risk",
     "x.nonaktif": "Disable",
@@ -317,6 +320,9 @@ const KAMUS = {
     "e.semua": "can read and change cookies on ALL sites",
     "e.tertentu": "has cookie permission (for specific sites)",
     "e.lalulintas": "can see all web traffic, including cookies being sent",
+    "e.sideload": "installed by another program on your computer (not from the official store, not by you)",
+    "e.admin": "installed through a system policy (registry/Group Policy), not by you",
+    "e.native": "can communicate with programs on your computer (nativeMessaging)",
 
     // ----- Login, reminders, notifications -----
     "l.dicek": "last checked: {w}",

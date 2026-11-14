@@ -17,3 +17,4 @@ jobs:
         with:
           node-version: 20
       - run: node periksa-keamanan.js
+      - run: node tests/jalankan.js

@@ -123,3 +123,7 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 1. Panduan darurat di popup: daftar langkah berurutan saat ada peringatan (ganti password dari perangkat bersih, keluar dari semua perangkat, periksa ekstensi, pindai antivirus)
 2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
 3. Tombol untuk memicu pengingat sekarang juga, bukan hanya menunggu jaraknya
+
+## Tes otomatis
+
+Jalankan `node tests/jalankan.js` (tanpa browser, tanpa instalasi). Tes ini juga berjalan otomatis di GitHub Actions setiap ada perubahan ke `main` atau pull request, bersama `periksa-keamanan.js`. Folder `tests` dan `.github` tidak ikut masuk ke zip rilis.

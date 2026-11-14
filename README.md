@@ -28,6 +28,14 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
 
+## Status pemantauan dan lencana di ikon
+
+Bagian atas tab **Peringatan** berisi kartu status supaya kamu bisa memastikan ekstensi bekerja: kapan terakhir
+ekstensi melihat perubahan cookie, jumlah cookie login yang terdeteksi, berapa situs yang dibersihkan otomatis,
+kapan terakhir kamu mengecek aktivitas login, dan apakah notifikasi diblokir oleh browser atau sistem operasi.
+Tidak ada perubahan cookie dalam beberapa jam itu wajar; kalau ada situs yang mengubah cookie, waktunya ikut
+berubah. Ikon di toolbar juga menampilkan angka merah sebesar jumlah peringatan yang belum dibersihkan.
+
 ## Tab Bersihkan: cookie login terdeteksi otomatis (opsional)
 
 Tab **Bersihkan** menampilkan situs yang kamu kunjungi dan punya cookie login, tanpa perlu mengetik apa pun.

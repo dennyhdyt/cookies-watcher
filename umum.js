@@ -527,6 +527,22 @@ async function catatTerakhirCek(daftarSitus) {
 }
 
 // "belum pernah", "hari ini", "kemarin", "3 hari lalu"
+// Selisih waktu yang ringkas: "baru saja", "5 menit lalu", "3 jam lalu", lalu hitungan hari.
+function waktuSingkat(waktu, sekarang) {
+  if (!waktu) return tr("waktu.belum");
+  const menit = Math.floor((sekarang - waktu) / 60000);
+  if (menit < 1) return tr("waktu.baru");
+  if (menit < 60) return tr("waktu.menit", { n: menit });
+  if (menit < 1440) return tr("waktu.jam", { n: Math.floor(menit / 60) });
+  return waktuRelatif(waktu, sekarang);
+}
+
+// Waktu terakhir ekstensi melihat perubahan cookie (dicatat oleh background.js).
+async function ambilCookieTerakhirDilihat() {
+  const data = await chrome.storage.local.get("cookieTerakhirDilihat");
+  return data.cookieTerakhirDilihat || 0;
+}
+
 function waktuRelatif(waktu, sekarang) {
   if (!waktu) return tr("waktu.belum");
   const hari = Math.floor((sekarang - waktu) / 86400000);

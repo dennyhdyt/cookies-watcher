@@ -1049,6 +1049,68 @@ document.getElementById("tombolBersihkanSekarang").addEventListener("click", asy
   tampilkanBersih();
 });
 
+// ---------- Kartu status pemantauan ----------
+
+function barisStatus(baik, teks) {
+  const baris = document.createElement("div");
+  baris.className = "status-baris " + (baik ? "ok" : "awas");
+  const tanda = document.createElement("span");
+  tanda.className = "tanda";
+  tanda.textContent = baik ? "✓" : "!";
+  const isi = document.createElement("span");
+  isi.textContent = teks;
+  baris.append(tanda, isi);
+  return baris;
+}
+
+async function tampilkanStatus() {
+  const wadah = document.getElementById("barisStatus");
+  const sekarang = Date.now();
+
+  const [dilihat, terdeteksi, daftarOto, halaman, dipantau, terakhir, pengingat, izinNotif] = await Promise.all([
+    ambilCookieTerakhirDilihat(),
+    cariSitusCookieLogin(),
+    ambilHapusSaatBuka(),
+    ambilHalamanSitus(),
+    ambilSitusDipantau(),
+    ambilTerakhirCek(),
+    ambilPengingat(),
+    chrome.notifications.getPermissionLevel().catch(() => "granted"),
+  ]);
+
+  wadah.textContent = "";
+  wadah.append(barisStatus(true, tr("status.aktif")));
+  wadah.append(
+    barisStatus(
+      true,
+      dilihat ? tr("status.cookieDilihat", { w: waktuSingkat(dilihat, sekarang) }) : tr("status.cookieBelum")
+    )
+  );
+
+  const jumlahCookie = terdeteksi.reduce((total, x) => total + x.jumlah, 0);
+  wadah.append(barisStatus(true, tr("status.login", { n: jumlahCookie, m: terdeteksi.length })));
+  wadah.append(
+    barisStatus(
+      true,
+      daftarOto.length > 0 ? tr("status.oto", { k: daftarOto.length }) : tr("status.otoMati")
+    )
+  );
+
+  // Cek aktivitas login: yang terbaru di antara semua situs, dan berapa yang terlambat.
+  const kelompok = kelompokkanHalaman(halaman, dipantau);
+  const semuaWaktu = Object.values(terakhir);
+  const terbaru = semuaWaktu.length ? Math.max(...semuaWaktu) : 0;
+  wadah.append(barisStatus(true, tr("status.cek", { w: waktuSingkat(terbaru, sekarang) })));
+  const terlambat = kelompokTerlambat(kelompok, terakhir, pengingat.hari, sekarang);
+  if (terlambat.length > 0) wadah.append(barisStatus(false, tr("status.cekTerlambat", { n: terlambat.length })));
+
+  wadah.append(
+    izinNotif === "denied"
+      ? barisStatus(false, tr("status.notifBlokir"))
+      : barisStatus(true, tr("status.notifOk"))
+  );
+}
+
 // ---------- Bahasa ----------
 
 // Mengisi semua teks tetap di popup.html sesuai bahasa aktif (pakai textContent).
@@ -1065,6 +1127,7 @@ function terapkanTeksStatis() {
 // Menggambar ulang semua bagian yang isinya dibuat oleh kode.
 function renderSemua() {
   terapkanTeksStatis();
+  tampilkanStatus();
   tampilkanPeringatan();
   tampilkanEkstensi();
   tampilkanAktivitas();

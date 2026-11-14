@@ -10,6 +10,34 @@ muatBahasa();
 
 // ---------- Fungsi bantu ----------
 
+// Lencana angka merah di ikon toolbar = jumlah peringatan yang belum dibersihkan.
+async function perbaruiLencana() {
+  try {
+    const data = await chrome.storage.local.get("peringatan");
+    const jumlah = (data.peringatan || []).length;
+    await chrome.action.setBadgeText({ text: jumlah === 0 ? "" : jumlah > 99 ? "99+" : String(jumlah) });
+    await chrome.action.setBadgeBackgroundColor({ color: "#d93025" });
+  } catch (e) {
+    // Lencana hanya tampilan; kalau gagal, peringatan tetap tersimpan.
+  }
+}
+// Lencana tidak bertahan setelah browser ditutup, jadi dipasang lagi tiap ekstensi mulai.
+perbaruiLencana();
+
+// Mencatat waktu terakhir ada perubahan cookie, sebagai bukti bahwa pemantauan hidup.
+// Ditulis paling sering sekali per menit supaya tidak membebani penyimpanan.
+let terakhirCatatDilihat = 0;
+async function catatCookieDilihat() {
+  const sekarang = Date.now();
+  if (sekarang - terakhirCatatDilihat < 60000) return;
+  terakhirCatatDilihat = sekarang;
+  try {
+    await chrome.storage.local.set({ cookieTerakhirDilihat: sekarang });
+  } catch (e) {
+    // Abaikan.
+  }
+}
+
 function kirimNotifikasi(judul, pesan) {
   chrome.notifications.create({
     type: "basic",
@@ -135,6 +163,8 @@ async function simpanPeringatanDomain(cookie, mirip) {
 
 // Ini bagian utama: dipanggil setiap kali ada cookie yang berubah di browser.
 chrome.cookies.onChanged.addListener(async (info) => {
+  catatCookieDilihat();
+
   // Kita hanya peduli saat cookie dibuat/diperbarui, bukan dihapus.
   if (info.removed) return;
 
@@ -283,6 +313,7 @@ chrome.windows.onCreated.addListener(saatJendelaDibuat);
 
 // Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
 chrome.storage.onChanged.addListener((perubahan, area) => {
+  if (area === "local" && perubahan.peringatan) perbaruiLencana();
   if (area === "local" && perubahan.pengingat) aturAlarm(true);
 });
 

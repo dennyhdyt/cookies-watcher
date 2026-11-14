@@ -311,3 +311,40 @@ h3 {
 .chip .aksi .bawaan {
   white-space: nowrap;
 }
+
+/* ---------- Kartu status pemantauan ---------- */
+
+section.status {
+  background: #f1f3f4;
+  border-radius: 6px;
+  padding: 2px 10px 6px;
+}
+
+section.status h2 {
+  margin-top: 8px;
+}
+
+.status-baris {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+  margin: 3px 0;
+}
+
+.status-baris .tanda {
+  font-weight: bold;
+  width: 12px;
+  flex: none;
+}
+
+.status-baris.ok .tanda {
+  color: #188038;
+}
+
+.status-baris.awas {
+  color: #b06000;
+}
+
+.status-baris.awas .tanda {
+  color: #b06000;
+}

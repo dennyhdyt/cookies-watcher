@@ -25,6 +25,9 @@ Sertakan langkah untuk mengulang masalahnya, versi ekstensi, dan browser yang di
    punya jalur ke ekstensi ini.
 5. **Izin sekecil mungkin.** Lihat tabel di README. Izin `management` bersifat opsional dan
    hanya diminta kalau kamu menyalakan pemeriksaan ekstensi.
+   Fitur "hapus saat tab ditutup" tidak memakai izin `tabs`: alamat tab dibaca lewat izin situs
+   yang sudah ada, dan hanya nama situs yang kamu pilih yang dicatat (memori sesi, bukan alamat
+   lengkap, tidak dikirim ke mana pun).
 6. **Tampilan tidak menulis HTML mentah.** Semua teks (termasuk nama cookie dan domain yang
    bisa dikendalikan situs lain) ditulis dengan `textContent`.
 

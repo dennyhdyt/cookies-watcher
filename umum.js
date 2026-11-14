@@ -501,13 +501,66 @@ async function bersihkanCookieTerpilih(sumber) {
   for (const { situs, mode } of daftar) {
     jumlah += await hapusCookieSitus(situs, mode, pengaturan);
   }
+  await catatRiwayatBersih(sumber || "manual", jumlah);
+  return jumlah;
+}
+
+// Menulis satu catatan ke riwayat pembersihan (maksimal 8, terbaru di depan).
+// "sumber": startup, jendela, manual, tab, atau darurat.
+async function catatRiwayatBersih(sumber, jumlah) {
   const waktu = Date.now();
   const riwayat = await ambilRiwayatBersih();
-  riwayat.unshift({ waktu: waktu, sumber: sumber || "manual", jumlah: jumlah });
+  riwayat.unshift({ waktu: waktu, sumber: sumber, jumlah: jumlah });
   await chrome.storage.local.set({
     hasilBersih: { waktu: waktu, jumlah: jumlah },
     riwayatBersih: riwayat.slice(0, 8),
   });
+}
+
+// ---------- Tombol darurat ----------
+
+// Menghapus cookie login SEMUA situs yang terdeteksi di browser ini.
+// Mengembalikan { situs: jumlah situs, cookie: jumlah cookie dihapus }.
+async function keluarkanSemuaLogin() {
+  const [terdeteksi, pengaturan] = await Promise.all([cariSitusCookieLogin(), ambilPengaturanNama()]);
+  let cookie = 0;
+  for (const { situs } of terdeteksi) {
+    cookie += await hapusCookieSitus(situs, "sesi", pengaturan);
+  }
+  await catatRiwayatBersih("darurat", cookie);
+  return { situs: terdeteksi.length, cookie: cookie };
+}
+
+// ---------- Hapus cookie login saat tab situs ditutup ----------
+
+// Daftar situs (teks domain utama) yang cookie login-nya dihapus saat tab-nya ditutup.
+async function ambilHapusSaatTabTutup() {
+  const data = await chrome.storage.local.get("hapusSaatTabTutup");
+  const daftar = (data.hapusSaatTabTutup || []).filter((x) => typeof x === "string" && !terlaluUmum(x));
+  return daftar.filter((x, i) => daftar.indexOf(x) === i);
+}
+
+// Alamat tab -> domain utama situsnya, atau null kalau bukan halaman web biasa.
+function situsDariAlamat(alamat) {
+  try {
+    const u = new URL(alamat);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    return domainUtama(u.hostname);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Dipanggil setelah sebuah tab ditutup. Menghapus cookie login situs itu HANYA kalau:
+// situsnya ada di daftar, dan tidak ada lagi tab lain yang membuka situs yang sama.
+// "alamatTersisa" = alamat semua tab yang masih terbuka. Mengembalikan jumlah cookie dihapus.
+async function hapusSetelahTabTutup(situs, alamatTersisa) {
+  if (!situs) return 0;
+  const daftar = await ambilHapusSaatTabTutup();
+  if (!daftar.includes(situs)) return 0;
+  if (alamatTersisa.some((a) => situsDariAlamat(a) === situs)) return 0;
+  const jumlah = await hapusCookieSitus(situs, "sesi", await ambilPengaturanNama());
+  if (jumlah > 0) await catatRiwayatBersih("tab", jumlah);
   return jumlah;
 }
 

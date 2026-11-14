@@ -348,3 +348,7 @@ section.status h2 {
 .status-baris.awas .tanda {
   color: #b06000;
 }
+
+.darurat { border: 1px solid #d93025; border-radius: 6px; padding: 8px; margin-bottom: 10px; }
+.darurat button { width: 100%; font-weight: 600; }
+.darurat .info { margin: 6px 0 0; }

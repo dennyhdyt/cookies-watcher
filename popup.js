@@ -932,8 +932,23 @@ async function ambilSitusTabAktif() {
 }
 
 // Satu baris situs yang terdeteksi punya cookie login.
-function barisSitusLogin(situs, jumlah, sudahOtomatis) {
+function barisSitusLogin(situs, jumlah, sudahOtomatis, sudahTabTutup) {
   const tombol = [];
+  if (sudahTabTutup) {
+    const label = document.createElement("span");
+    label.className = "bawaan";
+    label.textContent = tr("tabTutup.aktif");
+    tombol.push(label);
+  } else {
+    tombol.push(
+      buatTombol(tr("tabTutup.tambah"), "percaya", async () => {
+        const daftar = await ambilHapusSaatTabTutup();
+        if (!daftar.includes(situs)) await chrome.storage.local.set({ hapusSaatTabTutup: daftar.concat(situs) });
+        document.getElementById("pesanBersih").textContent = tr("tabTutup.ditambah", { s: situs });
+        tampilkanBersih();
+      })
+    );
+  }
   if (sudahOtomatis) {
     const label = document.createElement("span");
     label.className = "bawaan";
@@ -963,12 +978,14 @@ function barisSitusLogin(situs, jumlah, sudahOtomatis) {
 }
 
 async function tampilkanBersih() {
-  const [daftarOto, terdeteksi, situsTab] = await Promise.all([
+  const [daftarOto, daftarTab, terdeteksi, situsTab] = await Promise.all([
     ambilHapusSaatBuka(),
+    ambilHapusSaatTabTutup(),
     cariSitusCookieLogin(),
     ambilSitusTabAktif(),
   ]);
   const otomatis = new Set(daftarOto.map((x) => x.situs));
+  const tabTutup = new Set(daftarTab);
 
   // 1. Situs di tab yang sedang dibuka, paling atas.
   const kotakTab = document.getElementById("tabIniBersih");
@@ -980,7 +997,7 @@ async function tampilkanBersih() {
     judul.textContent = tr("bersih.tabIni");
     kotakTab.append(judul);
     if (cocok) {
-      const baris = barisSitusLogin(cocok.situs, cocok.jumlah, otomatis.has(cocok.situs));
+      const baris = barisSitusLogin(cocok.situs, cocok.jumlah, otomatis.has(cocok.situs), tabTutup.has(cocok.situs));
       baris.classList.add("sorot");
       kotakTab.append(baris);
       lewati = cocok.situs;
@@ -995,7 +1012,7 @@ async function tampilkanBersih() {
   const lain = terdeteksi.filter((x) => x.situs !== lewati);
   if (terdeteksi.length === 0) wadahDeteksi.append(buatKosong(tr("bersih.deteksiKosong")));
   for (const { situs, jumlah } of lain) {
-    wadahDeteksi.append(barisSitusLogin(situs, jumlah, otomatis.has(situs)));
+    wadahDeteksi.append(barisSitusLogin(situs, jumlah, otomatis.has(situs), tabTutup.has(situs)));
   }
 
   // 3. Daftar yang dibersihkan otomatis tiap browser dibuka.
@@ -1008,6 +1025,22 @@ async function tampilkanBersih() {
         buatTombol(tr("w.keluarkan"), "", async () => {
           const sisa = (await ambilHapusSaatBuka()).filter((x) => x.situs !== situs);
           await chrome.storage.local.set({ hapusSaatBuka: sisa });
+          tampilkanBersih();
+        }),
+      ])
+    );
+  }
+
+  // 4. Daftar yang dibersihkan saat tab ditutup.
+  const wadahTab = document.getElementById("daftarTabTutup");
+  wadahTab.textContent = "";
+  if (daftarTab.length === 0) wadahTab.append(buatKosong(tr("tabTutup.kosong")));
+  for (const situs of daftarTab) {
+    wadahTab.append(
+      buatChip(situs, tr("tabTutup.label"), [
+        buatTombol(tr("w.keluarkan"), "", async () => {
+          const sisa = (await ambilHapusSaatTabTutup()).filter((x) => x !== situs);
+          await chrome.storage.local.set({ hapusSaatTabTutup: sisa });
           tampilkanBersih();
         }),
       ])
@@ -1046,6 +1079,19 @@ document.getElementById("tombolBersihkanSekarang").addEventListener("click", asy
   if (!confirm(tr("bersih.konf", { n: daftar.length }) + peringatan)) return;
   const jumlah = await bersihkanCookieTerpilih("manual");
   document.getElementById("pesanBersih").textContent = tr("bersih.hasil", { n: jumlah });
+  tampilkanBersih();
+});
+
+document.getElementById("tombolDarurat").addEventListener("click", async () => {
+  const terdeteksi = await cariSitusCookieLogin();
+  const pesan = document.getElementById("pesanBersih");
+  if (terdeteksi.length === 0) {
+    pesan.textContent = tr("darurat.kosong");
+    return;
+  }
+  if (!confirm(tr("darurat.konf", { n: terdeteksi.length }))) return;
+  const hasil = await keluarkanSemuaLogin();
+  pesan.textContent = tr("darurat.hasil", { c: hasil.cookie, n: hasil.situs });
   tampilkanBersih();
 });
 

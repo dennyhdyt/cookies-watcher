@@ -124,6 +124,12 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
 3. Tombol untuk memicu pengingat sekarang juga, bukan hanya menunggu jaraknya
 
+## Tombol darurat dan hapus saat tab ditutup
+
+- **Keluarkan semua login sekarang** (tab Bersihkan): menghapus cookie login semua situs yang terdeteksi di browser ini, dengan konfirmasi. Ini tidak mengeluarkan login di perangkat lain; untuk itu ganti password dan pilih "keluar dari semua perangkat" di situsnya.
+- **Saat tab ditutup**: tombol di tiap situs yang terdeteksi. Situs yang dipilih dihapus cookie login-nya saat tab terakhir situs itu ditutup (tidak dihapus kalau masih ada tab lain dari situs yang sama). Hanya situs yang kamu pilih yang dipantau; ekstensi mencatat nama situsnya (bukan alamat lengkap) di memori sesi, hilang saat browser ditutup. Tidak ada izin baru: alamat tab dibaca lewat izin situs yang sudah ada, bukan izin "tabs".
+- Batas: kalau seluruh browser ditutup sekaligus, penghapusan saat tab ditutup bisa tidak sempat berjalan. Tambahkan situs yang sama ke daftar "saat browser dibuka" supaya pasti.
+
 ## Tes otomatis
 
 Jalankan `node tests/jalankan.js` (tanpa browser, tanpa instalasi). Tes ini juga berjalan otomatis di GitHub Actions setiap ada perubahan ke `main` atau pull request, bersama `periksa-keamanan.js`. Folder `tests` dan `.github` tidak ikut masuk ke zip rilis.

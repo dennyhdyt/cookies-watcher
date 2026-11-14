@@ -311,10 +311,71 @@ async function saatJendelaDibuat() {
 chrome.windows.onRemoved.addListener(tandaiJendelaTertutup);
 chrome.windows.onCreated.addListener(saatJendelaDibuat);
 
+// ---------- Hapus cookie login saat tab situs ditutup ----------
+//
+// Setelah tab ditutup, alamatnya tidak bisa dibaca lagi. Jadi kita mencatat tabId -> situs
+// selagi tab masih ada, HANYA untuk situs yang ada di daftar kamu (di memori sesi, hilang
+// saat browser ditutup). Alamat lengkap tidak pernah disimpan atau dikirim ke mana pun.
+// Membaca alamat tab memakai izin situs (host) yang sudah ada, bukan izin "tabs".
+
+let antrianTab = Promise.resolve();
+function urutkanTab(kerja) {
+  antrianTab = antrianTab.then(kerja, kerja).catch(() => {});
+  return antrianTab;
+}
+
+async function ambilPetaTab() {
+  if (!chrome.storage.session) return {};
+  const d = await chrome.storage.session.get("petaTab");
+  return d.petaTab || {};
+}
+
+async function catatTab(idTab, alamat) {
+  if (!chrome.storage.session || typeof alamat !== "string") return;
+  const [peta, daftar] = await Promise.all([ambilPetaTab(), ambilHapusSaatTabTutup()]);
+  const situs = situsDariAlamat(alamat);
+  if (situs && daftar.includes(situs)) peta[idTab] = situs;
+  else delete peta[idTab];
+  await chrome.storage.session.set({ petaTab: peta });
+}
+
+// Mencatat semua tab yang sudah terbuka (dipanggil saat service worker menyala dan saat daftar berubah).
+async function sinkronTab() {
+  const tabs = await chrome.tabs.query({});
+  for (const t of tabs) await catatTab(t.id, t.url);
+}
+
+async function saatTabDitutup(idTab) {
+  const peta = await ambilPetaTab();
+  const situs = peta[idTab];
+  if (!situs) return;
+  delete peta[idTab];
+  await chrome.storage.session.set({ petaTab: peta });
+  const tersisa = (await chrome.tabs.query({})).map((t) => t.url).filter(Boolean);
+  await hapusSetelahTabTutup(situs, tersisa);
+}
+
+chrome.tabs.onUpdated.addListener((idTab, perubahan, tab) => {
+  if (perubahan.url !== undefined) urutkanTab(() => catatTab(idTab, perubahan.url));
+});
+chrome.tabs.onReplaced.addListener((idBaru, idLama) =>
+  urutkanTab(async () => {
+    const peta = await ambilPetaTab();
+    if (peta[idLama]) {
+      peta[idBaru] = peta[idLama];
+      delete peta[idLama];
+      await chrome.storage.session.set({ petaTab: peta });
+    }
+  })
+);
+chrome.tabs.onRemoved.addListener((idTab) => urutkanTab(() => saatTabDitutup(idTab)));
+urutkanTab(sinkronTab);
+
 // Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
 chrome.storage.onChanged.addListener((perubahan, area) => {
   if (area === "local" && perubahan.peringatan) perbaruiLencana();
   if (area === "local" && perubahan.pengingat) aturAlarm(true);
+  if (area === "local" && perubahan.hapusSaatTabTutup) urutkanTab(sinkronTab);
 });
 
 // Saat alarm berbunyi: sebutkan situs yang belum kamu cek dalam beberapa hari ini.

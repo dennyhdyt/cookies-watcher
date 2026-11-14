@@ -19,6 +19,7 @@
       <button role="tab" id="tab-pindai" data-panel="panel-pindai" aria-selected="false"><span data-i18n="tab.pindai"></span></button>
       <button role="tab" id="tab-ekstensi" data-panel="panel-ekstensi" aria-selected="false"><span data-i18n="tab.ekstensi"></span></button>
       <button role="tab" id="tab-login" data-panel="panel-login" aria-selected="false"><span data-i18n="tab.login"></span></button>
+      <button role="tab" id="tab-bersih" data-panel="panel-bersih" aria-selected="false"><span data-i18n="tab.bersih"></span></button>
       <button role="tab" id="tab-pengaturan" data-panel="panel-pengaturan" aria-selected="false"><span data-i18n="tab.pengaturan"></span></button>
     </nav>
 
@@ -82,6 +83,29 @@
 
     </div>
 
+    <div class="panel" id="panel-bersih" role="tabpanel" aria-labelledby="tab-bersih" hidden>
+    <section>
+      <h2 data-i18n="bersih.judul"></h2>
+      <p class="info" data-i18n="bersih.info"></p>
+      <div class="baris">
+        <input id="inputBersih" type="text" data-i18n-placeholder="bersih.input" />
+      </div>
+      <div class="baris">
+        <select id="pilihModeBersih" class="lebar">
+          <option value="sesi" data-i18n="bersih.mode.sesi"></option>
+          <option value="semua" data-i18n="bersih.mode.semua"></option>
+        </select>
+        <button id="tombolTambahBersih" data-i18n="btn.tambah"></button>
+      </div>
+      <div id="pesanBersih" class="info"></div>
+      <div id="daftarBersih"></div>
+      <div id="statusBersih" class="info"></div>
+      <div class="baris">
+        <button id="tombolBersihkanSekarang" class="kecil" data-i18n="bersih.sekarang"></button>
+      </div>
+    </section>
+    </div>
+
     <div class="panel" id="panel-pengaturan" role="tabpanel" aria-labelledby="tab-pengaturan" hidden>
     <details>
       <summary data-i18n="set.dipantau"></summary>
@@ -109,21 +133,6 @@
       <div id="pesanNamaSesi" class="info"></div>
       <div id="daftarNamaSesi"></div>
 
-    </details>
-
-    <details>
-      <summary data-i18n="set.buka"></summary>
-      <p class="info" data-i18n="set.buka.info"></p>
-      <div class="baris">
-        <select id="pilihSitusBuka"></select>
-        <button id="tombolTambahBuka" data-i18n="btn.tambah"></button>
-      </div>
-      <div id="pesanBuka" class="info"></div>
-      <div id="daftarBuka"></div>
-      <div id="statusBuka" class="info"></div>
-      <div class="baris">
-        <button id="tombolBersihkanSekarang" class="kecil" data-i18n="set.buka.sekarang"></button>
-      </div>
     </details>
 
     <details>

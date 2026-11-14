@@ -914,66 +914,79 @@ tombolTab.forEach((t, i) => {
   pilihTab(awal);
 }
 
-// ---------- Hapus cookie sesi saat browser dibuka ----------
+// ---------- Tab Bersihkan: hapus cookie saat browser dibuka ----------
 
-async function tampilkanHapusBuka() {
-  const pilih = document.getElementById("pilihSitusBuka");
-  const terpilih = pilih.value;
-  pilih.textContent = "";
-  for (const situs of await ambilSitusDipantau()) {
-    const opsi = document.createElement("option");
-    opsi.value = situs;
-    opsi.textContent = situs;
-    pilih.append(opsi);
-  }
-  if ([...pilih.options].some((o) => o.value === terpilih)) pilih.value = terpilih;
+const namaMode = () => ({ sesi: tr("bersih.mode.sesi"), semua: tr("bersih.mode.semua") });
 
-  const wadah = document.getElementById("daftarBuka");
+async function tampilkanBersih() {
+  const wadah = document.getElementById("daftarBersih");
   wadah.textContent = "";
   const daftar = await ambilHapusSaatBuka();
-  if (daftar.length === 0) {
-    wadah.append(buatKosong(tr("set.buka.kosong")));
-  }
-  for (const situs of daftar) {
+  if (daftar.length === 0) wadah.append(buatKosong(tr("bersih.kosong")));
+  for (const { situs, mode } of daftar) {
     wadah.append(
-      buatChip(situs, null, [
+      buatChip(situs, namaMode()[mode], [
         buatTombol(tr("w.keluarkan"), "", async () => {
-          const sisa = (await ambilHapusSaatBuka()).filter((s) => s !== situs);
+          const sisa = (await ambilHapusSaatBuka()).filter((x) => x.situs !== situs);
           await chrome.storage.local.set({ hapusSaatBuka: sisa });
-          tampilkanHapusBuka();
+          tampilkanBersih();
         }),
       ])
     );
   }
 
   const hasil = await ambilHasilBersih();
-  document.getElementById("statusBuka").textContent = hasil
-    ? tr("set.buka.status", { w: formatWaktu(hasil.waktu), n: hasil.jumlah })
-    : tr("set.buka.belum");
+  document.getElementById("statusBersih").textContent = hasil
+    ? tr("bersih.status", { w: formatWaktu(hasil.waktu), n: hasil.jumlah })
+    : tr("bersih.belum");
   document.getElementById("tombolBersihkanSekarang").disabled = daftar.length === 0;
 }
 
-document.getElementById("tombolTambahBuka").addEventListener("click", async () => {
-  const situs = document.getElementById("pilihSitusBuka").value;
-  const pesan = document.getElementById("pesanBuka");
-  if (!situs) return;
+async function tambahBersih() {
+  const input = document.getElementById("inputBersih");
+  const pesan = document.getElementById("pesanBersih");
+  const mode = document.getElementById("pilihModeBersih").value;
+
+  const situs = rapikanNamaSitus(input.value);
+  if (!situs) {
+    pesan.textContent = tr("bersih.format");
+    return;
+  }
+  if (terlaluUmum(situs)) {
+    pesan.textContent = tr("bersih.terlaluUmum", { s: situs });
+    return;
+  }
+
   const daftar = await ambilHapusSaatBuka();
-  if (daftar.includes(situs)) {
+  const ada = daftar.find((x) => x.situs === situs);
+  if (ada && ada.mode === mode) {
     pesan.textContent = tr("d.sudahAda", { s: situs });
     return;
   }
-  await chrome.storage.local.set({ hapusSaatBuka: daftar.concat(situs) });
-  pesan.textContent = tr("set.buka.ditambah", { s: situs });
-  tampilkanHapusBuka();
+  if (mode === "semua" && !confirm(tr("bersih.konfTambahSemua", { s: situs }))) return;
+
+  const baru = daftar.filter((x) => x.situs !== situs).concat({ situs: situs, mode: mode });
+  await chrome.storage.local.set({ hapusSaatBuka: baru });
+  pesan.textContent = ada
+    ? tr("bersih.diubah", { s: situs, m: namaMode()[mode] })
+    : tr("bersih.ditambah", { s: situs, m: namaMode()[mode] });
+  input.value = "";
+  tampilkanBersih();
+}
+
+document.getElementById("tombolTambahBersih").addEventListener("click", tambahBersih);
+document.getElementById("inputBersih").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") tambahBersih();
 });
 
 document.getElementById("tombolBersihkanSekarang").addEventListener("click", async () => {
   const daftar = await ambilHapusSaatBuka();
   if (daftar.length === 0) return;
-  if (!confirm(tr("set.buka.konf", { n: daftar.length }))) return;
-  const jumlah = await bersihkanCookieSesi();
-  document.getElementById("pesanBuka").textContent = tr("set.buka.hasil", { n: jumlah });
-  tampilkanHapusBuka();
+  const peringatan = daftar.some((x) => x.mode === "semua") ? tr("bersih.konfSemua") : "";
+  if (!confirm(tr("bersih.konf", { n: daftar.length }) + peringatan)) return;
+  const jumlah = await bersihkanCookieTerpilih();
+  document.getElementById("pesanBersih").textContent = tr("bersih.hasil", { n: jumlah });
+  tampilkanBersih();
 });
 
 // ---------- Bahasa ----------
@@ -999,7 +1012,7 @@ function renderSemua() {
   tampilkanSitusDipantau();
   tampilkanPilihanSitus();
   tampilkanNamaSesi();
-  tampilkanHapusBuka();
+  tampilkanBersih();
   tampilkanDaftarPutih();
 }
 
@@ -1008,7 +1021,7 @@ for (const tombol of document.querySelectorAll("[data-bahasa]")) {
     if (tombol.dataset.bahasa === bahasaAktif) return;
     await simpanBahasa(tombol.dataset.bahasa);
     // Pesan dan hasil pemindaian lama masih memakai bahasa sebelumnya, jadi dikosongkan.
-    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanBuka", "pesanDaftarPutih", "hasilPindai"]) {
+    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanBersih", "pesanDaftarPutih", "hasilPindai"]) {
       document.getElementById(id).textContent = "";
     }
     renderSemua();

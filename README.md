@@ -28,12 +28,18 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
 
-## Hapus cookie sesi saat browser dibuka (opsional)
+## Tab Bersihkan: hapus cookie saat browser dibuka (opsional)
 
-Di tab **Pengaturan** kamu bisa memilih situs yang cookie sesi loginnya dihapus setiap browser dibuka.
-Cookie yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi, tetapi kamu harus login ulang di situs itu.
-Hanya cookie bernama sesi (sessionid, xs, dll.) yang dihapus; tema, bahasa, dan cookie lain tidak disentuh.
-Mati secara bawaan. Tombol **Bersihkan sekarang** menjalankannya langsung.
+Di tab **Bersihkan** kamu bisa mengetik situs mana saja (boleh alamat lengkap, tidak harus yang ada di daftar bawaan)
+yang cookie-nya dihapus setiap browser dibuka. Cookie yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi,
+tetapi kamu harus login ulang di situs itu. Tiap situs punya dua pilihan mode:
+
+- **Cookie sesi login saja:** hanya cookie bernama sesi (sessionid, xs, dll.). Tema, bahasa, dan cookie lain tidak
+  disentuh. Untuk situs yang nama cookie sesinya tidak dikenal, tambahkan namanya di Pengaturan, atau pakai mode berikut.
+- **Semua cookie situs:** semua cookie situs itu, termasuk subdomainnya.
+
+Nama yang terlalu umum (misalnya `co.id` atau `com`) ditolak karena akan mencakup banyak situs. Fitur ini mati secara
+bawaan. Tombol **Bersihkan sekarang** menjalankannya langsung.
 
 Batasan: penghapusan terjadi saat browser **dibuka**, bukan saat ditutup (browser tidak memberi ekstensi
 sinyal "akan ditutup" yang andal), jadi cookie masih ada di disk selama browser mati.

@@ -237,7 +237,7 @@ chrome.runtime.onStartup.addListener(() => aturAlarm(false));
 // Saat browser dibuka: hapus cookie sesi login situs yang kamu pilih (kalau ada).
 async function saatBrowserDibuka() {
   try {
-    await bersihkanCookieSesi();
+    await bersihkanCookieTerpilih();
   } catch (e) {
     // Kalau gagal, biarkan: cookie tetap ada dan bisa dibersihkan manual dari popup.
   }

@@ -191,12 +191,13 @@ select {
 }
 
 .tab button {
-  flex: 1;
+  flex: 1 1 auto; /* lebar mengikuti isi, jadi lencana angka tidak menimpa tab lain */
   background: none;
   color: #5f6368;
   border-radius: 0;
-  padding: 8px 2px;
-  font-size: 12px;
+  padding: 8px 1px;
+  font-size: 11px;
+  min-width: 0;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
 }
@@ -213,14 +214,16 @@ select {
 
 .tab .jumlah {
   display: inline-block;
-  min-width: 14px;
-  padding: 0 4px;
-  margin-left: 3px;
+  text-align: center;
+  padding: 0 3px;
+  margin-left: 2px;
   border-radius: 8px;
   background: #d93025;
   color: white;
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 9px;
+  line-height: 12px;
+  min-width: 12px;
+  vertical-align: top;
 }
 
 .panel[hidden] {
@@ -283,4 +286,11 @@ summary {
   background: #1a73e8;
   color: white;
   font-weight: bold;
+}
+
+/* Pilihan yang teksnya panjang mengisi sisa baris */
+select.lebar {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
 }

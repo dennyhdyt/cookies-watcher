@@ -398,9 +398,16 @@ async function hapusCookie(cookie) {
   });
 }
 
+// Daftar situs yang dibersihkan saat browser dibuka: [{ situs, mode }].
+// mode "sesi"  = hanya cookie sesi login (nama dikenali)
+// mode "semua" = semua cookie situs itu
+// Data lama berupa teks biasa (sebelum ada mode) dianggap mode "sesi".
 async function ambilHapusSaatBuka() {
   const data = await chrome.storage.local.get("hapusSaatBuka");
-  return data.hapusSaatBuka || [];
+  return (data.hapusSaatBuka || [])
+    .map((x) => (typeof x === "string" ? { situs: x, mode: "sesi" } : x))
+    .filter((x) => x && typeof x.situs === "string")
+    .map((x) => ({ situs: x.situs, mode: x.mode === "semua" ? "semua" : "sesi" }));
 }
 
 async function ambilHasilBersih() {
@@ -408,21 +415,29 @@ async function ambilHasilBersih() {
   return data.hasilBersih || null;
 }
 
-// Menghapus cookie SESI LOGIN (hanya yang namanya ada di daftar nama sesi) dari
-// semua situs di daftar "hapus saat dibuka". Cookie lain (tema, bahasa, dll.) tidak disentuh.
+// Nama yang terlalu umum (co.id, com, ...) akan mencakup ribuan situs, jadi ditolak.
+function terlaluUmum(situs) {
+  const bagian = situs.split(".");
+  return bagian.length < 2 || (bagian.length === 2 && SLD_UMUM.includes(bagian[0]));
+}
+
+// Menghapus cookie dari semua situs di daftar "hapus saat dibuka".
+// Mode "sesi" hanya menghapus cookie yang namanya ada di daftar nama sesi;
+// mode "semua" menghapus semua cookie situs itu.
 // Mengembalikan jumlah cookie yang dihapus.
-async function bersihkanCookieSesi() {
+async function bersihkanCookieTerpilih() {
   const daftar = await ambilHapusSaatBuka();
   if (daftar.length === 0) return 0;
 
   const pengaturan = await ambilPengaturanNama();
   let jumlah = 0;
-  for (const situs of daftar) {
+  for (const { situs, mode } of daftar) {
+    if (terlaluUmum(situs)) continue; // pengaman kalau data tersimpan rusak
     const nama = namaSesiUntuk(situs, pengaturan);
     const semua = await chrome.cookies.getAll({ domain: situs });
     for (const cookie of semua) {
       if (!cocokDomain(cookie.domain, situs)) continue;
-      if (!nama.includes(cookie.name.toLowerCase())) continue;
+      if (mode === "sesi" && !nama.includes(cookie.name.toLowerCase())) continue;
       await hapusCookie(cookie);
       jumlah++;
     }

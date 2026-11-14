@@ -1,7 +1,7 @@
 // ============================================================
 // background.js
 // Berjalan di latar belakang. Tugasnya: memantau setiap perubahan
-// cookies, memantau ekstensi baru, dan mengirim pengingat berkala.
+// cookies, memantau ekstensi baru, dan membersihkan cookie login.
 // ============================================================
 
 // Memuat data dan fungsi bersama (lihat umum.js dan ekstensi.js).
@@ -233,37 +233,6 @@ chrome.permissions.onAdded.addListener((izin) => {
   if ((izin.permissions || []).includes("management")) pasangPendengarEkstensi();
 });
 
-// ---------- Pengingat berkala: cek aktivitas login ----------
-// Ekstensi tidak bisa melihat pemakaian cookie di perangkat lain, jadi kita
-// mengingatkan kamu memeriksa halaman aktivitas login di situs penting.
-// Pengaturannya (aktif/tidak dan jarak hari) disimpan dengan nama "pengingat".
-
-const NAMA_ALARM = "pengingat-aktivitas-login";
-
-// Menyiapkan alarm sesuai pengaturan.
-// buatUlang = false: kalau alarm sudah ada, biarkan (supaya hitungan hari tidak
-//   diulang dari nol setiap browser dibuka).
-// buatUlang = true: dipakai saat pengaturan diubah.
-async function aturAlarm(buatUlang) {
-  const p = await ambilPengingat();
-  const alarm = await chrome.alarms.get(NAMA_ALARM);
-
-  if (!p.aktif) {
-    if (alarm) await chrome.alarms.clear(NAMA_ALARM);
-    return;
-  }
-  if (alarm && !buatUlang) return;
-
-  const menit = p.hari * 24 * 60;
-  await chrome.alarms.create(NAMA_ALARM, {
-    delayInMinutes: menit,
-    periodInMinutes: menit,
-  });
-}
-
-chrome.runtime.onInstalled.addListener(() => aturAlarm(false));
-chrome.runtime.onStartup.addListener(() => aturAlarm(false));
-
 // ---------- Bersihkan cookie login saat browser dibuka ----------
 //
 // Ada dua pemicu, karena browser sering tetap berjalan di latar belakang setelah jendela
@@ -371,37 +340,8 @@ chrome.tabs.onReplaced.addListener((idBaru, idLama) =>
 chrome.tabs.onRemoved.addListener((idTab) => urutkanTab(() => saatTabDitutup(idTab)));
 urutkanTab(sinkronTab);
 
-// Kalau pengaturan diubah dari popup, alarm langsung disesuaikan.
+// Kalau pengaturan diubah dari popup, tampilan dan pemantauan langsung disesuaikan.
 chrome.storage.onChanged.addListener((perubahan, area) => {
   if (area === "local" && perubahan.peringatan) perbaruiLencana();
-  if (area === "local" && perubahan.pengingat) aturAlarm(true);
   if (area === "local" && perubahan.hapusSaatTabTutup) urutkanTab(sinkronTab);
-});
-
-// Saat alarm berbunyi: sebutkan situs yang belum kamu cek dalam beberapa hari ini.
-// Kalau semuanya sudah dicek, tidak ada notifikasi (supaya tidak mengganggu).
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== NAMA_ALARM) return;
-
-  const p = await ambilPengingat();
-  const [halaman, dipantau, terakhir] = await Promise.all([
-    ambilHalamanSitus(),
-    ambilSitusDipantau(),
-    ambilTerakhirCek(),
-  ]);
-
-  const kelompok = kelompokkanHalaman(halaman, dipantau);
-  const terlambat = kelompokTerlambat(kelompok, terakhir, p.hari, Date.now());
-  if (terlambat.length === 0) return;
-
-  await muatBahasa();
-  const nama = terlambat.map(([url, daftarSitus]) => daftarSitus.join(" / "));
-  const tampil =
-    nama.slice(0, 3).join(", ") +
-    (nama.length > 3 ? tr("b.ingat.lainnya", { n: nama.length - 3 }) : "");
-
-  kirimNotifikasi(
-    tr("b.ingat.judul"),
-    tr("b.ingat.isi", { h: p.hari, t: tampil })
-  );
 });

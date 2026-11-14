@@ -22,7 +22,7 @@ const lolos = [];
 
 // ---------- 1. manifest.json ----------
 
-const IZIN_BOLEH = ["cookies", "storage", "notifications", "alarms"];
+const IZIN_BOLEH = ["cookies", "storage", "notifications"];
 const IZIN_OPSIONAL_BOLEH = ["management"];
 const KUNCI_TERLARANG = [
   "content_scripts",          // menjalankan kode di dalam halaman situs lain

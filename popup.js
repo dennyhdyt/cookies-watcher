@@ -184,10 +184,8 @@ async function tampilkanPeringatan() {
     const tautan = mirip ? null : halaman[p.situs];
     if (tautan) {
       item.append(
-        buatTombol(tr("p.keluarSemua"), "keamanan", async () => {
-          await catatTerakhirCek([p.situs]);
+        buatTombol(tr("p.keluarSemua"), "keamanan", () => {
           chrome.tabs.create({ url: tautan });
-          tampilkanAktivitas();
         })
       );
     }
@@ -477,97 +475,6 @@ async function tampilkanEkstensiTepercaya() {
   }
 }
 
-// ---------- Bagian 4: Periksa aktivitas login, pengingat, tes notifikasi ----------
-
-async function tampilkanAktivitas() {
-  const wadah = document.getElementById("daftarAktivitas");
-  const info = document.getElementById("situsTanpaTautan");
-  wadah.textContent = "";
-  info.textContent = "";
-
-  const [halaman, dipantau, terakhir, pengingat] = await Promise.all([
-    ambilHalamanSitus(),
-    ambilSitusDipantau(),
-    ambilTerakhirCek(),
-    ambilPengingat(),
-  ]);
-
-  const sekarang = Date.now();
-  const kelompok = kelompokkanHalaman(halaman, dipantau);
-
-  for (const [url, daftarSitus] of kelompok) {
-    const terbaru = Math.max(0, ...daftarSitus.map((s) => terakhir[s] || 0));
-    const terlambat = !terbaru || sekarang - terbaru >= pengingat.hari * 86400000;
-
-    wadah.append(
-      buatChip(
-        daftarSitus.join(" / "),
-        tr("l.dicek", { w: waktuRelatif(terbaru, sekarang) }),
-        [
-          buatTombol(tr("l.buka"), "keamanan", async () => {
-            // Membuka halaman dianggap sebagai pengecekan.
-            await catatTerakhirCek(daftarSitus);
-            chrome.tabs.create({ url: url });
-            tampilkanAktivitas();
-          }),
-          buatTombol(tr("l.sudah"), "", async () => {
-            await catatTerakhirCek(daftarSitus);
-            tampilkanAktivitas();
-          }),
-        ],
-        terlambat ? "lewat" : ""
-      )
-    );
-  }
-
-  const tanpaTautan = dipantau.filter((s) => !halaman[s]);
-  if (tanpaTautan.length > 0) {
-    info.textContent = tr("l.tanpaTautan", { l: tanpaTautan.join(", ") });
-  }
-}
-
-async function muatPengingat() {
-  const p = await ambilPengingat();
-  document.getElementById("centangPengingat").checked = p.aktif;
-  document.getElementById("pilihHari").value = String(p.hari);
-}
-
-async function simpanPengingat() {
-  const aktif = document.getElementById("centangPengingat").checked;
-  const hari = Number(document.getElementById("pilihHari").value);
-  const pesan = document.getElementById("pesanPengingat");
-
-  // background.js memantau perubahan ini dan menyesuaikan alarmnya sendiri.
-  await chrome.storage.local.set({ pengingat: { aktif: aktif, hari: hari } });
-  pesan.textContent = aktif
-    ? tr("l.pengingatAktif", { h: hari })
-    : tr("l.pengingatMati");
-  tampilkanAktivitas(); // warna "terlambat" bergantung pada jarak hari
-}
-
-document.getElementById("centangPengingat").addEventListener("change", simpanPengingat);
-document.getElementById("pilihHari").addEventListener("change", simpanPengingat);
-
-// Tes notifikasi: langsung menampilkan satu notifikasi contoh.
-document.getElementById("tombolTesNotif").addEventListener("click", () => {
-  const pesan = document.getElementById("pesanPengingat");
-  chrome.notifications.create(
-    {
-      type: "basic",
-      iconUrl: "icon128.png",
-      title: tr("n.judul"),
-      message: tr("n.isi"),
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        pesan.textContent = tr("n.gagal", { e: chrome.runtime.lastError.message });
-      } else {
-        pesan.textContent = tr("n.terkirim");
-      }
-    }
-  );
-});
-
 // ---------- Bagian 5: Situs yang dipantau ----------
 
 async function tampilkanSitusDipantau() {
@@ -598,21 +505,18 @@ async function tampilkanSitusDipantau() {
 // Menghapus situs tambahan beserta semua pengaturan yang terkait dengannya.
 async function hapusSitusTambahan(situs) {
   const data = await chrome.storage.local.get([
-    "situsTambahan", "halamanSitus", "namaCookiePerSitus", "terakhirCek",
+    "situsTambahan", "halamanSitus", "namaCookiePerSitus",
   ]);
 
   const halaman = data.halamanSitus || {};
   const nama = data.namaCookiePerSitus || {};
-  const terakhir = data.terakhirCek || {};
   delete halaman[situs];
   delete nama[situs];
-  delete terakhir[situs];
 
   await chrome.storage.local.set({
     situsTambahan: (data.situsTambahan || []).filter((s) => s !== situs),
     halamanSitus: halaman,
     namaCookiePerSitus: nama,
-    terakhirCek: terakhir,
   });
   segarkanDaftarSitus();
 }
@@ -620,7 +524,6 @@ async function hapusSitusTambahan(situs) {
 // Dipanggil setiap daftar situs berubah, supaya semua bagian ikut diperbarui.
 function segarkanDaftarSitus() {
   tampilkanSitusDipantau();
-  tampilkanAktivitas();
   tampilkanPilihanSitus();
   tampilkanNamaSesi();
   tampilkanPeringatan();
@@ -1113,14 +1016,10 @@ async function tampilkanStatus() {
   const wadah = document.getElementById("barisStatus");
   const sekarang = Date.now();
 
-  const [dilihat, terdeteksi, daftarOto, halaman, dipantau, terakhir, pengingat, izinNotif] = await Promise.all([
+  const [dilihat, terdeteksi, daftarOto, izinNotif] = await Promise.all([
     ambilCookieTerakhirDilihat(),
     cariSitusCookieLogin(),
     ambilHapusSaatBuka(),
-    ambilHalamanSitus(),
-    ambilSitusDipantau(),
-    ambilTerakhirCek(),
-    ambilPengingat(),
     chrome.notifications.getPermissionLevel().catch(() => "granted"),
   ]);
 
@@ -1141,14 +1040,6 @@ async function tampilkanStatus() {
       daftarOto.length > 0 ? tr("status.oto", { k: daftarOto.length }) : tr("status.otoMati")
     )
   );
-
-  // Cek aktivitas login: yang terbaru di antara semua situs, dan berapa yang terlambat.
-  const kelompok = kelompokkanHalaman(halaman, dipantau);
-  const semuaWaktu = Object.values(terakhir);
-  const terbaru = semuaWaktu.length ? Math.max(...semuaWaktu) : 0;
-  wadah.append(barisStatus(true, tr("status.cek", { w: waktuSingkat(terbaru, sekarang) })));
-  const terlambat = kelompokTerlambat(kelompok, terakhir, pengingat.hari, sekarang);
-  if (terlambat.length > 0) wadah.append(barisStatus(false, tr("status.cekTerlambat", { n: terlambat.length })));
 
   wadah.append(
     izinNotif === "denied"
@@ -1176,8 +1067,6 @@ function renderSemua() {
   tampilkanStatus();
   tampilkanPeringatan();
   tampilkanEkstensi();
-  tampilkanAktivitas();
-  muatPengingat();
   tampilkanSitusDipantau();
   tampilkanPilihanSitus();
   tampilkanNamaSesi();
@@ -1190,7 +1079,7 @@ for (const tombol of document.querySelectorAll("[data-bahasa]")) {
     if (tombol.dataset.bahasa === bahasaAktif) return;
     await simpanBahasa(tombol.dataset.bahasa);
     // Pesan dan hasil pemindaian lama masih memakai bahasa sebelumnya, jadi dikosongkan.
-    for (const id of ["pesanPengingat", "pesanDipantau", "pesanNamaSesi", "pesanBersih", "pesanDaftarPutih", "hasilPindai"]) {
+    for (const id of ["pesanDipantau", "pesanNamaSesi", "pesanBersih", "pesanDaftarPutih", "hasilPindai"]) {
       document.getElementById(id).textContent = "";
     }
     renderSemua();

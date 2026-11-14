@@ -3,7 +3,7 @@
   "name": "Pemantau Cookies",
   "version": "0.1.0",
   "description": "Memantau perubahan cookies sesi yang mencurigakan dan membantu menghapusnya.",
-  "permissions": ["cookies", "storage", "notifications", "alarms"],
+  "permissions": ["cookies", "storage", "notifications"],
   "optional_permissions": ["management"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {

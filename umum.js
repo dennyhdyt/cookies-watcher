@@ -564,22 +564,6 @@ async function hapusSetelahTabTutup(situs, alamatTersisa) {
   return jumlah;
 }
 
-// ---------- Pencatatan terakhir cek ----------
-
-async function ambilTerakhirCek() {
-  const data = await chrome.storage.local.get("terakhirCek");
-  return data.terakhirCek || {};
-}
-
-// Mencatat waktu sekarang sebagai waktu terakhir dibuka untuk beberapa situs.
-async function catatTerakhirCek(daftarSitus) {
-  const catatan = await ambilTerakhirCek();
-  const sekarang = Date.now();
-  for (const situs of daftarSitus) catatan[situs] = sekarang;
-  await chrome.storage.local.set({ terakhirCek: catatan });
-}
-
-// "belum pernah", "hari ini", "kemarin", "3 hari lalu"
 // Selisih waktu yang ringkas: "baru saja", "5 menit lalu", "3 jam lalu", lalu hitungan hari.
 function waktuSingkat(waktu, sekarang) {
   if (!waktu) return tr("waktu.belum");
@@ -602,40 +586,4 @@ function waktuRelatif(waktu, sekarang) {
   if (hari <= 0) return tr("waktu.hariIni");
   if (hari === 1) return tr("waktu.kemarin");
   return tr("waktu.hariLalu", { n: hari });
-}
-
-// Mengelompokkan situs yang dipantau berdasarkan alamat halamannya,
-// supaya situs yang berbagi halaman (Google dan YouTube) jadi satu baris.
-// Hasilnya Map: alamat -> [situs, situs, ...]
-function kelompokkanHalaman(halaman, dipantau) {
-  const kelompok = new Map();
-  for (const situs of dipantau) {
-    const url = halaman[situs];
-    if (!url) continue;
-    if (!kelompok.has(url)) kelompok.set(url, []);
-    kelompok.get(url).push(situs);
-  }
-  return kelompok;
-}
-
-// Kelompok yang belum dibuka dalam "hari" hari terakhir (atau belum pernah).
-function kelompokTerlambat(kelompok, terakhir, hari, sekarang) {
-  const batas = hari * 86400000;
-  const hasil = [];
-  for (const [url, daftarSitus] of kelompok) {
-    const terbaru = Math.max(0, ...daftarSitus.map((s) => terakhir[s] || 0));
-    if (!terbaru || sekarang - terbaru >= batas) hasil.push([url, daftarSitus]);
-  }
-  return hasil;
-}
-
-// ---------- Pengingat ----------
-
-// Pengaturan pengingat: { aktif, hari }. Mati secara bawaan.
-async function ambilPengingat() {
-  const data = await chrome.storage.local.get("pengingat");
-  const p = Object.assign({ aktif: false, hari: 7 }, data.pengingat || {});
-  // Jaga supaya jarak hari wajar (1 sampai 90).
-  p.hari = Math.max(1, Math.min(90, Number(p.hari) || 7));
-  return p;
 }

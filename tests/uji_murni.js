@@ -39,13 +39,6 @@ const cek = [
   rel(0, sekarang) === 'belum pernah', rel(sekarang - 3600000, sekarang) === 'hari ini',
   rel(sekarang - h, sekarang) === 'kemarin', rel(sekarang - 5 * h, sekarang) === '5 hari lalu',
 ];
-const kel = f('kelompokkanHalaman')(f('HALAMAN_BAWAAN'), f('SITUS_BAWAAN'));
-cek.push(kel.size === 6, [...kel.values()].some(x => x.join() === 'google.com,youtube.com'));
-const hal = Object.assign({}, f('HALAMAN_BAWAAN'), { 'tokopedia.com': 'https://www.tokopedia.com/akun' });
-const kel2 = f('kelompokkanHalaman')(hal, D);
-const terl = f('kelompokTerlambat')(kel2, { 'google.com': sekarang - 2 * h, 'github.com': sekarang - 10 * h, 'tokopedia.com': sekarang }, 7, sekarang);
-const namaTerl = terl.map(([u, s]) => s.join('/')).sort();
-cek.push(!namaTerl.includes('google.com/youtube.com'), namaTerl.includes('github.com'), !namaTerl.includes('tokopedia.com'), namaTerl.includes('facebook.com'));
 const ns = f('namaSesiUntuk');
 const p = { global: ['gg'], perSitus: { 'tokopedia.com': ['_tkp'] } };
 cek.push(ns('tokopedia.com', p).includes('_tkp'), !ns('facebook.com', p).includes('_tkp'), ns('facebook.com', p).includes('gg'), ns(null, p).includes('sessionid'));

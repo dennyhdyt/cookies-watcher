@@ -18,12 +18,12 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | File | Fungsi |
 |------|--------|
 | `manifest.json` | "KTP" ekstensi: nama, izin yang diminta, file yang dipakai |
-| `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, dan pengingat berkala |
+| `background.js` | Pemantau di latar belakang: cookie sesi yang berubah, domain mirip, ekstensi baru, pembersihan cookie login, dan tab ditutup |
 | `popup.html` / `popup.css` | Tampilan jendela kecil saat ikon diklik, dibagi dalam 5 tab: Peringatan, Pemindaian, Ekstensi, Login, Pengaturan (angka merah di tab Peringatan = jumlah peringatan) |
 | `bahasa.js` | Kamus teks Indonesia dan Inggris, plus pemilihan bahasa. Dimuat paling awal oleh `background.js` dan popup |
 | `umum.js` | Data dan fungsi bersama (daftar situs, nama cookie sesi, deteksi domain mirip, penyimpanan, catatan cek). Dimuat oleh `background.js` dan popup |
 | `ekstensi.js` | Aturan pemeriksaan izin ekstensi lain, dipakai bersama oleh `background.js` dan popup |
-| `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, aktivitas login, daftar putih |
+| `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, bersihkan cookie, daftar putih |
 | `periksa-keamanan.js` | Alat bantu: `node periksa-keamanan.js` memeriksa izin dan melarang jaringan, eval, pembacaan nilai cookie, dll. |
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
 | `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
@@ -32,7 +32,7 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 
 Bagian atas tab **Peringatan** berisi kartu status supaya kamu bisa memastikan ekstensi bekerja: kapan terakhir
 ekstensi melihat perubahan cookie, jumlah cookie login yang terdeteksi, berapa situs yang dibersihkan otomatis,
-kapan terakhir kamu mengecek aktivitas login, dan apakah notifikasi diblokir oleh browser atau sistem operasi.
+dan apakah notifikasi diblokir oleh browser atau sistem operasi.
 Tidak ada perubahan cookie dalam beberapa jam itu wajar; kalau ada situs yang mengubah cookie, waktunya ikut
 berubah. Ikon di toolbar juga menampilkan angka merah sebesar jumlah peringatan yang belum dibersihkan.
 
@@ -77,9 +77,7 @@ dan `LOCALE`, dan satu tombol di `popup.html`.
 - **Perlu diperhatikan:** alamat IP publik (alamat jaringan lokal seperti 192.168.x.x tidak dihitung) dan domain punycode biasa (misalnya situs berhuruf Mandarin atau Rusia yang sah) hanya muncul di pemindaian, **tanpa notifikasi**, karena situs sah juga kadang begini. Tombol **Percayai** memasukkannya ke daftar putih.
 
 - **Ekstensi berizin cookies:** popup menampilkan ekstensi lain yang bisa membaca cookies atau melihat lalu lintas web (risiko tinggi kalau berlaku untuk semua situs). Kamu bisa menonaktifkan, menghapus, atau menandainya tepercaya (misalnya pengelola password milikmu). Notifikasi juga muncul saat ekstensi baru seperti itu dipasang atau diaktifkan. Fitur ini memakai izin `management`, yang bersifat **opsional**: mati secara bawaan, dan baru aktif kalau kamu menekan tombol "Aktifkan pemeriksaan ekstensi" di popup (browser akan meminta persetujuan). Bisa dimatikan lagi kapan saja dengan tombol yang sama.
-- **Periksa aktivitas login:** popup mengumpulkan tombol ke halaman aktivitas login/sesi tiap situs, tempat kamu bisa melihat perangkat dan lokasi yang sedang masuk. Tiap baris mencatat kapan terakhir dicek (merah kalau belum pernah atau sudah lewat dari jarak pengingat). Tombol **Buka** dan **Sudah dicek** sama-sama mencatat waktu; "Buka" dianggap pengecekan, jadi pastikan kamu benar-benar melihat daftar perangkatnya.
-- **Pengingat berkala:** mati secara bawaan. Centang "Ingatkan saya setiap N hari"; notifikasi hanya muncul kalau ada situs yang belum dicek dalam N hari terakhir, dan menyebut situs mana saja. Tombol **Tes notifikasi** menampilkan satu notifikasi contoh untuk memastikan notifikasi tidak diblokir. Pengingat memakai izin `alarms`.
-- **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri, dengan tautan halaman aktivitas login yang opsional (harus https; kalau mengarah ke host lain, kamu diminta mengonfirmasi dulu). Menyimpan ulang situs yang sama memperbarui tautannya. Menghapus situs tambahan juga membersihkan tautan, nama cookie, dan catatan cek miliknya.
+- **Situs dipantau:** selain daftar bawaan (Facebook, Google, dll.), kamu bisa menambah situs sendiri, dengan tautan "keluar dari semua perangkat" yang opsional (dipakai tombol di peringatan) (harus https; kalau mengarah ke host lain, kamu diminta mengonfirmasi dulu). Menyimpan ulang situs yang sama memperbarui tautannya. Menghapus situs tambahan juga membersihkan tautan dan nama cookie miliknya.
 - **Nama cookie sesi:** tambahkan nama cookie sesi sendiri, untuk **semua situs** atau **satu situs saja** (pilih lewat kotak pilihan). Berlaku untuk pemantauan dan pemindaian. Namanya bisa dicari lewat DevTools: F12, tab Application, Cookies.
 - **Keluar dari semua perangkat:** peringatan cookie sesi punya tombol yang membuka halaman sesi/keamanan situs terkait (Facebook, Instagram, Google/YouTube, X, LinkedIn, GitHub, dan situs tambahan yang kamu beri tautan). Alamat halaman bisa berubah kalau situsnya mengubah pengaturan.
 - **Daftar putih:** situs yang kamu percaya tidak memicu peringatan dan tidak muncul di hasil pemindaian. Tambahkan lewat kolom input di popup, atau tombol "Percayai situs ini" pada peringatan. Subdomain ikut dihitung (menambah `google.com` juga mencakup `accounts.google.com`).
@@ -96,7 +94,6 @@ Ekstensi ini sengaja dibuat kecil permukaan serangnya. Detail lengkap ada di `SE
 | `cookies` | ya | Melihat nama, domain, dan pengaturan cookie (nilai tidak dibaca) |
 | `storage` | ya | Menyimpan daftar peringatan dan pengaturan secara lokal |
 | `notifications` | ya | Memberi tahu saat ada perubahan mencurigakan |
-| `alarms` | ya | Pengingat berkala |
 | akses semua situs | ya | Syarat Chrome agar cookies semua situs bisa dibaca |
 | `management` | opsional | Memeriksa ekstensi lain, hanya kalau kamu aktifkan |
 
@@ -122,7 +119,6 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 
 1. Panduan darurat di popup: daftar langkah berurutan saat ada peringatan (ganti password dari perangkat bersih, keluar dari semua perangkat, periksa ekstensi, pindai antivirus)
 2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
-3. Tombol untuk memicu pengingat sekarang juga, bukan hanya menunggu jaraknya
 
 ## Tombol darurat dan hapus saat tab ditutup
 

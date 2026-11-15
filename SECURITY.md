@@ -25,6 +25,18 @@ Sertakan langkah untuk mengulang masalahnya, versi ekstensi, dan browser yang di
    punya jalur ke ekstensi ini.
 5. **Izin sekecil mungkin.** Lihat tabel di README. Izin `management` bersifat opsional dan
    hanya diminta kalau kamu menyalakan pemeriksaan ekstensi.
+   Izin `browsingData` juga opsional: hanya diminta kalau kamu mencentang "hapus juga data
+   penyimpanan situs" di panel Lindungi. Kodenya dibatasi dan dijaga pemeriksa keamanan:
+   hanya `chrome.browsingData.remove({ origins: ... }, { localStorage: true })`, yaitu hanya
+   menghapus (tidak membaca) `localStorage`, hanya untuk alamat situs yang kamu simpan.
+   Riwayat penelusuran, unduhan, kata sandi, cache, dan penghapusan tanpa batas alamat
+   dilarang oleh pemeriksa dan akan membuat GitHub Actions merah.
+   Izin `scripting` juga opsional, hanya diminta saat kamu menekan "Tampilkan nama data
+   penyimpanan" atau memilih kunci. Hanya `chrome.scripting.executeScript` dengan fungsi bawaan
+   (bukan berkas atau kode luar), di dunia terisolasi, dan fungsi itu hanya boleh
+   `Object.keys(localStorage)` (nama kunci) dan `localStorage.removeItem` (hapus). Membaca nilai,
+   `sessionStorage`, dunia MAIN, `files`, dan API `chrome.scripting` lain dilarang oleh pemeriksa.
+   Tetap tidak ada `content_scripts`: tidak ada kode yang berjalan di halaman tanpa kamu menekan tombol.
    Fitur "hapus saat tab ditutup" tidak memakai izin `tabs`: alamat tab dibaca lewat izin situs
    yang sudah ada, dan hanya nama situs yang kamu pilih yang dicatat (memori sesi, bukan alamat
    lengkap, tidak dikirim ke mana pun).

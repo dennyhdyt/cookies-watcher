@@ -94,6 +94,8 @@ Ekstensi ini sengaja dibuat kecil permukaan serangnya. Detail lengkap ada di `SE
 | `notifications` | ya | Memberi tahu saat ada perubahan mencurigakan |
 | akses semua situs | ya | Syarat Chrome agar cookies semua situs bisa dibaca |
 | `management` | opsional | Memeriksa ekstensi lain, hanya kalau kamu aktifkan |
+| `browsingData` | opsional | Menghapus SEMUA `localStorage` situs yang kamu lindungi (tanpa membaca), hanya kalau kamu centang opsinya |
+| `scripting` | opsional | Membaca NAMA kunci `localStorage` di tab yang kamu pilih dan menghapus kunci yang kamu centang. Nilainya tidak dibaca; hanya dijalankan saat kamu menekan tombolnya |
 
 Tanpa jaringan, tanpa kode dari luar, tanpa penerima pesan dari situs web. Ini bukan jaminan
 kebal: malware di komputer atau akun pemilik yang dibobol tetap di luar jangkauan ekstensi ini.
@@ -117,6 +119,17 @@ dibajak: ganti password dan keluar dari semua perangkat di situs terkait.
 
 1. Panduan darurat di popup: daftar langkah berurutan saat ada peringatan (ganti password dari perangkat bersih, keluar dari semua perangkat, periksa ekstensi, pindai antivirus)
 2. Ekspor/impor pengaturan (situs, nama cookie, daftar putih)
+
+## Lindungi situs ini (tanpa mengetik)
+
+Di tab Bersihkan, kartu **Tab ini** membaca nama situs dari tab yang sedang kamu buka. Klik **Lindungi situs ini**:
+- Ekstensi menampilkan **nama** cookie situs itu (isinya tidak pernah dibaca). Yang mirip login (`sessionid`, `token`, `auth`, dst.) sudah tercentang; pelacak seperti `_ga` diberi keterangan dan tidak dicentang. Kamu bisa mengubah pilihannya.
+- Pilih kapan login dihapus: saat tab ditutup, saat browser dibuka, atau keduanya. Ada opsi **hapus SEMUA cookie situs**.
+- Opsi **hapus juga data penyimpanan situs (localStorage)** untuk situs yang menyimpan login di sana (misalnya yang tidak punya cookie login terlihat). Ini butuh izin opsional `browsingData`, hanya menghapus, hanya untuk alamat tab yang kamu lindungi (subdomain lain perlu dilindungi dari tabnya sendiri), dan riwayat penelusuran tidak disentuh.
+- **Data penyimpanan (localStorage) bisa dipilih per kunci.** Ekstensi menampilkan NAMA kunci di tab yang sedang dibuka (misalnya `token`), kamu centang mana yang dihapus. Butuh izin opsional `scripting`, dan nilainya tidak pernah dibaca. Batasan: penghapusan per kunci hanya jalan saat tab situsnya masih terbuka (lewat Hapus sekarang atau tombol darurat); setelah tab ditutup browser tidak mengizinkan ekstensi menyentuh kunci itu, jadi untuk hapus otomatis saat tab ditutup pakai opsi hapus SEMUA data penyimpanan.
+- Semua situs yang dilindungi ada di daftar **Situs terlindungi**, dengan tombol nyala/mati per situs, Hapus sekarang, dan Hapus dari daftar. Tombol darurat ikut mencakup situs-situs ini.
+
+Batas: login yang disimpan situs di tempat selain cookie dan `localStorage` (misalnya `indexedDB`) tidak terjangkau. Pencocokan dan penghapusan sudah diuji di Chromium, belum di Edge.
 
 ## Tombol darurat dan hapus saat tab ditutup
 

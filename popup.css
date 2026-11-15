@@ -352,3 +352,27 @@ section.status h2 {
 .darurat { border: 1px solid #d93025; border-radius: 6px; padding: 8px; margin-bottom: 10px; }
 .darurat button { width: 100%; font-weight: 600; }
 .darurat .info { margin: 6px 0 0; }
+
+/* Kartu "Tab ini" dan daftar situs terlindungi */
+.kartu-tab, .kartu-lindung { border: 1px solid #dadce0; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+.kartu-tab { border: 2px solid #1a73e8; background: #f8fbff; }
+.kartu-kepala { display: flex; align-items: center; gap: 10px; }
+.kartu-nama { display: flex; flex-direction: column; flex-grow: 1; min-width: 0; }
+.kartu-nama strong { overflow-wrap: anywhere; }
+.kartu-nama small { color: #5f6368; font-size: 11px; }
+.huruf { width: 32px; height: 32px; border-radius: 50%; background: #5865f2; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.lencana { font-size: 11px; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.lencana.awas { color: #8a5a00; background: #fef7e0; border: 1px solid #f9ab00; }
+.lencana.ok { color: #0d652d; background: #e6f4ea; border: 1px solid #188038; }
+.lebar-penuh { width: 100%; padding: 10px 12px; font-weight: 600; }
+.panel-pilih { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #dadce0; padding-top: 10px; }
+.panel-pilih[hidden] { display: none; }
+.centang { display: flex; align-items: flex-start; gap: 10px; min-height: 28px; font-size: 13px; flex-wrap: wrap; }
+.centang input { width: 18px; height: 18px; margin: 1px 0 0; accent-color: #1a73e8; flex-shrink: 0; }
+.centang .kode { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.centang small { flex-basis: 100%; margin-left: 28px; color: #5f6368; font-size: 11px; }
+.peringatan-kuning { background: #fef7e0; border: 1px solid #f9ab00; color: #5f3b00; border-radius: 8px; padding: 10px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.pil-baris { display: flex; gap: 6px; flex-wrap: wrap; }
+.pil { border: 1px solid #dadce0; background: #ffffff; color: #5f6368; border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.pil.aktif { border-color: #1a73e8; background: #e8f0fe; color: #174ea6; font-weight: 600; }
+.centang > span { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }

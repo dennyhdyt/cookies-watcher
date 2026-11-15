@@ -23,7 +23,7 @@ const lolos = [];
 // ---------- 1. manifest.json ----------
 
 const IZIN_BOLEH = ["cookies", "storage", "notifications"];
-const IZIN_OPSIONAL_BOLEH = ["management"];
+const IZIN_OPSIONAL_BOLEH = ["management", "browsingData", "scripting"];
 const KUNCI_TERLARANG = [
   "content_scripts",          // menjalankan kode di dalam halaman situs lain
   "web_accessible_resources", // membuka file ekstensi ke halaman web
@@ -102,8 +102,19 @@ const POLA_JS = [
   [/\beval\s*\(/, "eval(): menjalankan teks sebagai kode"],
   [/\bnew\s+Function\b/, "new Function: menjalankan teks sebagai kode"],
   [/\binnerHTML\b|\bouterHTML\b|\binsertAdjacentHTML\b|\bdocument\.write\b/, "menulis HTML mentah (pakai textContent)"],
-  [/\bchrome\.(scripting|debugger|webRequest|declarativeNetRequest|proxy|downloads|history|bookmarks|identity|nativeMessaging|privacy|sessions|topSites|pageCapture|tabCapture|desktopCapture)\b/, "API Chrome yang tidak dipakai proyek ini"],
+  [/\bchrome\.(debugger|webRequest|declarativeNetRequest|proxy|downloads|history|bookmarks|identity|nativeMessaging|privacy|sessions|topSites|pageCapture|tabCapture|desktopCapture)\b/, "API Chrome yang tidak dipakai proyek ini"],
   [/\bcookies\.set\s*\(/, "chrome.cookies.set: menulis cookie"],
+  // browsingData hanya boleh dipakai persis seperti ini: hapus localStorage untuk alamat yang kamu simpan.
+  [/\bbrowsingData\.(?!remove\b)\w+/, "browsingData: hanya chrome.browsingData.remove yang boleh dipakai"],
+  [/\bbrowsingData\.remove\s*\((?!\s*\{\s*origins\s*:)/, "browsingData.remove tanpa batas alamat (origins): bisa menghapus data semua situs"],
+  [/\b(history|downloads|passwords|formData|cache|cacheStorage|indexedDB|fileSystems|serviceWorkers|webSQL|appcache|pluginData)\s*:\s*true\b/, "jenis data browsingData yang tidak boleh dihapus (hanya localStorage)"],
+  // chrome.scripting hanya boleh dipakai untuk executeScript dengan fungsi bawaan (bukan berkas/kode luar),
+  // di dunia terisolasi, dan fungsi itu hanya boleh membaca NAMA kunci localStorage atau menghapus kunci.
+  [/\bchrome\.scripting\.(?!executeScript\b)\w+/, "chrome.scripting: hanya executeScript yang boleh dipakai"],
+  [/\bfiles\s*:\s*\[/, "executeScript dengan berkas (files): hanya fungsi bawaan (func) yang boleh"],
+  [/\bworld\s*:\s*["'`]MAIN["'`]/, "world MAIN: skrip tidak boleh berjalan di dunia halaman situs"],
+  [/(?<!Object\.keys\()\blocalStorage\b(?!\s*\.\s*removeItem\b|\s*:\s*true\b)/, "localStorage: hanya Object.keys(localStorage) dan localStorage.removeItem yang boleh dipakai (nilainya tidak boleh dibaca)", ["bahasa.js", "popup.js"]],
+  [/\bsessionStorage\b/, "sessionStorage tidak boleh dipakai", ["bahasa.js", "popup.js"]],
   [/\b(?:cookie|ck)\.value\b/, "membaca NILAI cookie (proyek ini hanya boleh membaca nama dan pengaturannya)"],
   [/\bchrome\.runtime\.(onMessage|onMessageExternal|onConnect|onConnectExternal|sendMessage|connect|sendNativeMessage)\b/, "pintu masuk atau pengiriman pesan antar-bagian"],
   [/["'`]http:\/\/[a-z0-9]/i, "alamat http:// tanpa enkripsi"],
@@ -134,7 +145,8 @@ for (const penuh of berkas) {
     const lokasi = rel + ":" + (i + 1);
 
     if (ext === ".js") {
-      for (const [pola, alasan] of POLA_JS) {
+      for (const [pola, alasan, kecuali] of POLA_JS) {
+        if (kecuali && kecuali.includes(rel)) continue;
         if (pola.test(teks)) gagal.push(lokasi + "  " + alasan + "\n      " + t.slice(0, 110));
       }
       // importScripts hanya boleh memuat berkas lokal, dan hanya di background.js

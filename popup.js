@@ -562,19 +562,25 @@ tombolTab.forEach((t, i) => {
 
 // ---------- Tab Bersihkan: cookie login terdeteksi otomatis ----------
 
-const namaMode = () => ({ sesi: tr("bersih.mode.sesi"), semua: tr("bersih.mode.semua") });
 
 // Situs dari tab yang sedang dibuka (null kalau bukan halaman web biasa).
-async function ambilSitusTabAktif() {
+// Tab yang sedang dibuka: { situs: domain utama, origin: alamat lengkap situs }, atau null.
+async function ambilTabAktif() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.url) return null;
     const alamat = new URL(tab.url);
     if (alamat.protocol !== "https:" && alamat.protocol !== "http:") return null;
-    return domainUtama(alamat.hostname);
+    const situs = domainUtama(alamat.hostname);
+    if (!situs || terlaluUmum(situs)) return null;
+    return { situs: situs, origin: alamat.origin, id: tab.id };
   } catch (e) {
     return null;
   }
+}
+async function ambilSitusTabAktif() {
+  const tab = await ambilTabAktif();
+  return tab ? tab.situs : null;
 }
 
 // Satu baris situs yang terdeteksi punya cookie login.
@@ -623,34 +629,313 @@ function barisSitusLogin(situs, jumlah, sudahOtomatis, sudahTabTutup) {
   return buatChip(situs, tr("bersih.cookieN", { n: jumlah }), tombol);
 }
 
-async function tampilkanBersih() {
-  const [daftarOto, daftarTab, terdeteksi, situsTab] = await Promise.all([
+// ---------- Kartu "Tab ini" dan daftar situs terlindungi ----------
+
+function buatCentang(teks, tercentang) {
+  const label = document.createElement("label");
+  label.className = "centang";
+  const kotak = document.createElement("input");
+  kotak.type = "checkbox";
+  kotak.checked = !!tercentang;
+  const span = document.createElement("span");
+  span.textContent = teks;
+  label.append(kotak, span);
+  return { label: label, kotak: kotak, span: span };
+}
+
+function buatPil(teks, aktif, aksi) {
+  const t = document.createElement("button");
+  t.className = "pil" + (aktif ? " aktif" : "");
+  t.setAttribute("aria-pressed", aktif ? "true" : "false");
+  t.textContent = teks + ": " + tr(aktif ? "lindung.nyala" : "lindung.mati");
+  t.addEventListener("click", aksi);
+  return t;
+}
+
+// Isi panel pilihan: daftar NAMA cookie situs (isinya tidak pernah dibaca) dan kapan dihapus.
+async function bangunPanelPilih(panel, tab, ada, pesan) {
+  panel.textContent = "";
+  const [pengaturan, cookies] = await Promise.all([
+    ambilPengaturanNama(),
+    chrome.cookies.getAll({ domain: tab.situs }),
+  ]);
+  const tampil = new Map();
+  for (const c of cookies) {
+    if (!cocokDomain(c.domain, tab.situs)) continue;
+    const kunci = c.name.toLowerCase();
+    if (!tampil.has(kunci)) tampil.set(kunci, c.name);
+  }
+  const urutan = { dikenal: 0, mirip: 1, lain: 2, pelacak: 3 };
+  const daftar = Array.from(tampil.keys())
+    .map((n) => ({ nama: n, asli: tampil.get(n), jenis: jenisNamaCookie(n, tab.situs, pengaturan) }))
+    .sort((a, b) => urutan[a.jenis] - urutan[b.jenis] || a.nama.localeCompare(b.nama));
+  const adaLogin = daftar.some((x) => x.jenis === "dikenal" || x.jenis === "mirip");
+
+  const judul = document.createElement("strong");
+  judul.textContent = tr("pilih.judul", { s: tab.situs });
+  const info = document.createElement("p");
+  info.className = "info";
+  info.textContent = tr("pilih.info");
+  panel.append(judul, info);
+
+  if (!adaLogin && !ada) {
+    const peringatan = document.createElement("div");
+    peringatan.className = "peringatan-kuning";
+    const t = document.createElement("strong");
+    t.textContent = tr("pilih.tidakAdaJudul");
+    const isi = document.createElement("div");
+    isi.textContent = tr("pilih.tidakAdaIsi");
+    peringatan.append(t, isi);
+    panel.append(peringatan);
+  }
+  if (daftar.length === 0) panel.append(buatKosong(tr("pilih.kosongCookie")));
+
+  const kotakNama = [];
+  for (const c of daftar) {
+    const tercentang = ada ? ada.nama.includes(c.nama) : c.jenis === "dikenal" || c.jenis === "mirip";
+    const cb = buatCentang(c.asli, tercentang);
+    cb.span.className = "kode";
+    const ket = document.createElement("small");
+    if (c.jenis !== "lain") ket.textContent = tr("pilih." + c.jenis);
+    cb.label.append(ket);
+    panel.append(cb.label);
+    kotakNama.push({ nama: c.nama, kotak: cb.kotak });
+  }
+
+  // Data penyimpanan situs (localStorage): hanya NAMA kunci yang dibaca, lalu kamu pilih mana yang dihapus.
+  const kunciJudul = document.createElement("strong");
+  kunciJudul.textContent = tr("kunci.judul");
+  const kunciInfo = document.createElement("p");
+  kunciInfo.className = "info";
+  kunciInfo.textContent = tr("kunci.info");
+  const wadahKunci = document.createElement("div");
+  const kotakKunci = [];
+  const isiKunci = async () => {
+    wadahKunci.textContent = "";
+    kotakKunci.length = 0;
+    const terbaca = await bacaNamaKunciTab(tab.id);
+    const tersimpan = ada ? ada.kunci : [];
+    const gabung = (terbaca || []).concat(tersimpan.filter((k) => !(terbaca || []).includes(k)));
+    const urutKunci = { mirip: 0, lain: 1, pelacak: 2 };
+    const daftarKunci = gabung
+      .map((k) => ({ nama: k, jenis: jenisNamaKunci(k) }))
+      .sort((a, b) => urutKunci[a.jenis] - urutKunci[b.jenis] || a.nama.localeCompare(b.nama));
+    if (terbaca === null) {
+      const tombolIzin = buatTombol(tr("kunci.tombolIzin"), "percaya", async () => {
+        let boleh = false;
+        try {
+          boleh = await chrome.permissions.request({ permissions: ["scripting"] });
+        } catch (e) {
+          boleh = false;
+        }
+        if (boleh) await isiKunci();
+        else pesan.textContent = tr("kunci.ditolak");
+      });
+      tombolIzin.id = "tombolBacaKunci";
+      const catatanIzin = document.createElement("p");
+      catatanIzin.className = "info";
+      catatanIzin.textContent = tr("kunci.catatanIzin");
+      wadahKunci.append(tombolIzin, catatanIzin);
+    } else if (daftarKunci.length === 0) {
+      wadahKunci.append(buatKosong(tr("kunci.kosong")));
+    }
+    for (const k of daftarKunci) {
+      const tercentang = ada ? tersimpan.includes(k.nama) : k.jenis === "mirip";
+      const cb = buatCentang(k.nama, tercentang);
+      cb.span.className = "kode";
+      const ket = document.createElement("small");
+      if (k.jenis === "mirip") ket.textContent = tr("kunci.mirip");
+      else if (k.jenis === "pelacak") ket.textContent = tr("kunci.pelacak");
+      cb.label.append(ket);
+      wadahKunci.append(cb.label);
+      kotakKunci.push({ nama: k.nama, kotak: cb.kotak });
+    }
+  };
+  await isiKunci();
+  panel.append(kunciJudul, kunciInfo, wadahKunci);
+
+  const kapan = document.createElement("strong");
+  kapan.textContent = tr("pilih.kapan");
+  const cbTab = buatCentang(tr("pilih.tab"), ada ? ada.tabTutup : true);
+  const cbBuka = buatCentang(tr("pilih.buka"), ada ? ada.browserDibuka : true);
+  const cbSemua = buatCentang(tr("pilih.semua"), ada ? ada.semua : false);
+  const cbData = buatCentang(tr("pilih.data", { o: tab.origin }), ada ? ada.origins.length > 0 : !adaLogin);
+  panel.append(kapan, cbTab.label, cbBuka.label, cbSemua.label, cbData.label);
+
+  const aksi = document.createElement("div");
+  aksi.className = "baris";
+  const simpan = buatTombol(tr("pilih.simpan"), "percaya", async () => {
+    // Permintaan izin harus langsung dari klik, jadi dilakukan paling awal.
+    const nama = kotakNama.filter((x) => x.kotak.checked).map((x) => x.nama);
+    const kunci = kotakKunci.filter((x) => x.kotak.checked).map((x) => x.nama);
+    const semua = cbSemua.kotak.checked;
+    if (nama.length === 0 && kunci.length === 0 && !semua && !cbData.kotak.checked) {
+      pesan.textContent = tr("pilih.kosongPilihan");
+      return;
+    }
+    // Satu permintaan izin untuk semua yang dibutuhkan (harus langsung dari klik).
+    const butuh = [];
+    if (cbData.kotak.checked && !chrome.browsingData) butuh.push("browsingData");
+    if (kunci.length > 0 && !chrome.scripting) butuh.push("scripting");
+    let boleh = true;
+    if (butuh.length > 0) {
+      try {
+        boleh = await chrome.permissions.request({ permissions: butuh });
+      } catch (e) {
+        boleh = false;
+      }
+    }
+    let origins = [];
+    let catatan = "";
+    if (cbData.kotak.checked && boleh) origins = (ada ? ada.origins : []).concat(tab.origin);
+    if (!boleh) catatan = " " + tr("pilih.izinDitolak");
+    await simpanPerlindunganSitus(tab.situs, {
+      nama: nama,
+      semua: semua,
+      origins: origins,
+      kunci: kunci,
+      tabTutup: cbTab.kotak.checked,
+      browserDibuka: cbBuka.kotak.checked,
+    });
+    panel.hidden = true;
+    // Pesan di kotak bersama bawah, karena kartu ini digambar ulang setelah disimpan.
+    document.getElementById("pesanBersih").textContent = tr("pilih.tersimpan", { s: tab.situs }) + catatan;
+    tampilkanBersih();
+  });
+  simpan.id = "tombolSimpanLindungi";
+  const batal = buatTombol(tr("pilih.batal"), "kecil", () => {
+    panel.hidden = true;
+  });
+  aksi.append(simpan, batal);
+  panel.append(aksi);
+}
+
+async function tampilkanKartuTab(kotak, tab, terlindungi) {
+  kotak.textContent = "";
+  if (!tab) return;
+  const ada = terlindungi.find((x) => x.situs === tab.situs) || null;
+  const judul = document.createElement("h3");
+  judul.textContent = tr("bersih.tabIni");
+  const kartu = document.createElement("div");
+  kartu.className = "kartu-tab";
+
+  const kepala = document.createElement("div");
+  kepala.className = "kartu-kepala";
+  const huruf = document.createElement("div");
+  huruf.className = "huruf";
+  huruf.textContent = tab.situs.charAt(0).toUpperCase();
+  const nama = document.createElement("div");
+  nama.className = "kartu-nama";
+  const n1 = document.createElement("strong");
+  n1.textContent = tab.situs;
+  const n2 = document.createElement("small");
+  n2.textContent = tr("tabIni.terbaca");
+  nama.append(n1, n2);
+  const status = document.createElement("span");
+  status.className = "lencana " + (ada ? "ok" : "awas");
+  status.textContent = tr(ada ? "tabIni.sudah" : "tabIni.belum");
+  kepala.append(huruf, nama, status);
+
+  const pesan = document.createElement("div");
+  pesan.className = "info";
+  const panel = document.createElement("div");
+  panel.className = "panel-pilih";
+  panel.hidden = true;
+  const tombol = buatTombol(tr(ada ? "tabIni.atur" : "tabIni.tombol"), "percaya", async () => {
+    if (panel.hidden) {
+      await bangunPanelPilih(panel, tab, ada, pesan);
+      panel.hidden = false;
+    } else {
+      panel.hidden = true;
+    }
+  });
+  tombol.id = "tombolLindungi";
+  tombol.classList.add("lebar-penuh");
+  kartu.append(kepala, tombol, panel, pesan);
+  kotak.append(judul, kartu);
+}
+
+function tampilkanDaftarLindungi(wadah, daftar) {
+  wadah.textContent = "";
+  if (daftar.length === 0) wadah.append(buatKosong(tr("lindung.kosong")));
+  const pesan = document.getElementById("pesanBersih");
+  for (const item of daftar) {
+    const kartu = document.createElement("div");
+    kartu.className = "kartu-lindung";
+    const atas = document.createElement("div");
+    atas.className = "kartu-kepala";
+    const nama = document.createElement("div");
+    nama.className = "kartu-nama";
+    const n1 = document.createElement("strong");
+    n1.textContent = item.situs;
+    const n2 = document.createElement("small");
+    let sub = item.semua
+      ? tr("lindung.subSemua")
+      : item.nama.length > 0
+        ? tr("lindung.subNama", { n: item.nama.length })
+        : tr("lindung.subOtomatis");
+    if (item.origins.length > 0) sub += " · " + tr("lindung.subData");
+    if (item.kunci.length > 0) sub += " · " + tr("lindung.subKunci", { n: item.kunci.length });
+    n2.textContent = sub;
+    nama.append(n1, n2);
+    const sekarang = buatTombol(tr("bersih.hapusSekarang"), "hapus", async () => {
+      if (!confirm(tr("lindung.konfSekarang", { s: item.situs }))) return;
+      const dihapus = await hapusCookieSitus(item.situs, item.semua ? "semua" : "sesi", await ambilPengaturanNama());
+      pesan.textContent = tr("bersih.hasilSatu", { s: item.situs, n: dihapus });
+      tampilkanBersih();
+    });
+    atas.append(nama, sekarang);
+
+    const pil = document.createElement("div");
+    pil.className = "pil-baris";
+    pil.append(
+      buatPil(tr("lindung.pilTab"), item.tabTutup, async () => {
+        const sisa = (await ambilHapusSaatTabTutup()).filter((x) => x !== item.situs);
+        if (!item.tabTutup) sisa.push(item.situs);
+        await chrome.storage.local.set({ hapusSaatTabTutup: sisa });
+        tampilkanBersih();
+      }),
+      buatPil(tr("lindung.pilBuka"), item.browserDibuka, async () => {
+        const sisa = (await ambilHapusSaatBuka()).filter((x) => x.situs !== item.situs);
+        if (!item.browserDibuka) sisa.push({ situs: item.situs, mode: item.semua ? "semua" : "sesi" });
+        await chrome.storage.local.set({ hapusSaatBuka: sisa });
+        tampilkanBersih();
+      })
+    );
+    const keluarkan = buatTombol(tr("lindung.hapusDaftar"), "", async () => {
+      await hapusPerlindunganSitus(item.situs);
+      pesan.textContent = tr("lindung.dikeluarkan", { s: item.situs });
+      tampilkanBersih();
+    });
+    keluarkan.classList.add("kecil");
+    kartu.append(atas, pil, keluarkan);
+    wadah.append(kartu);
+  }
+}
+
+// ulangPanel: dipakai saat bahasa diganti, supaya panel Lindungi yang terbuka ikut digambar ulang.
+async function tampilkanBersih(ulangPanel) {
+  const [daftarOto, daftarTab, terdeteksi, tab, terlindungi] = await Promise.all([
     ambilHapusSaatBuka(),
     ambilHapusSaatTabTutup(),
     cariSitusCookieLogin(),
-    ambilSitusTabAktif(),
+    ambilTabAktif(),
+    ambilSitusTerlindungi(),
   ]);
   const otomatis = new Set(daftarOto.map((x) => x.situs));
   const tabTutup = new Set(daftarTab);
 
-  // 1. Situs di tab yang sedang dibuka, paling atas.
+  // 1. Situs di tab yang sedang dibuka, paling atas. Panel yang sedang terbuka tidak ditutup paksa.
   const kotakTab = document.getElementById("tabIniBersih");
-  kotakTab.textContent = "";
-  let lewati = null;
-  if (situsTab) {
-    const cocok = terdeteksi.find((x) => x.situs === situsTab);
-    const judul = document.createElement("h3");
-    judul.textContent = tr("bersih.tabIni");
-    kotakTab.append(judul);
-    if (cocok) {
-      const baris = barisSitusLogin(cocok.situs, cocok.jumlah, otomatis.has(cocok.situs), tabTutup.has(cocok.situs));
-      baris.classList.add("sorot");
-      kotakTab.append(baris);
-      lewati = cocok.situs;
-    } else {
-      kotakTab.append(buatKosong(tr("bersih.tabIniKosong", { s: situsTab })));
+  const panelTerbuka = kotakTab.querySelector(".panel-pilih:not([hidden])");
+  if (!panelTerbuka || ulangPanel) {
+    await tampilkanKartuTab(kotakTab, tab, terlindungi);
+    if (panelTerbuka && tab) {
+      const tombolBuka = document.getElementById("tombolLindungi");
+      if (tombolBuka) tombolBuka.click();
     }
   }
+  const lewati = tab ? tab.situs : null;
 
   // 2. Semua situs lain yang cookie login-nya terdeteksi.
   const wadahDeteksi = document.getElementById("daftarDeteksi");
@@ -661,37 +946,8 @@ async function tampilkanBersih() {
     wadahDeteksi.append(barisSitusLogin(situs, jumlah, otomatis.has(situs), tabTutup.has(situs)));
   }
 
-  // 3. Daftar yang dibersihkan otomatis tiap browser dibuka.
-  const wadah = document.getElementById("daftarBersih");
-  wadah.textContent = "";
-  if (daftarOto.length === 0) wadah.append(buatKosong(tr("bersih.kosong")));
-  for (const { situs, mode } of daftarOto) {
-    wadah.append(
-      buatChip(situs, namaMode()[mode], [
-        buatTombol(tr("w.keluarkan"), "", async () => {
-          const sisa = (await ambilHapusSaatBuka()).filter((x) => x.situs !== situs);
-          await chrome.storage.local.set({ hapusSaatBuka: sisa });
-          tampilkanBersih();
-        }),
-      ])
-    );
-  }
-
-  // 4. Daftar yang dibersihkan saat tab ditutup.
-  const wadahTab = document.getElementById("daftarTabTutup");
-  wadahTab.textContent = "";
-  if (daftarTab.length === 0) wadahTab.append(buatKosong(tr("tabTutup.kosong")));
-  for (const situs of daftarTab) {
-    wadahTab.append(
-      buatChip(situs, tr("tabTutup.label"), [
-        buatTombol(tr("w.keluarkan"), "", async () => {
-          const sisa = (await ambilHapusSaatTabTutup()).filter((x) => x !== situs);
-          await chrome.storage.local.set({ hapusSaatTabTutup: sisa });
-          tampilkanBersih();
-        }),
-      ])
-    );
-  }
+  // 3. Semua situs yang kamu lindungi, dengan pilihan kapan login dihapus.
+  tampilkanDaftarLindungi(document.getElementById("daftarLindungi"), terlindungi);
 
   const hasil = await ambilHasilBersih();
   document.getElementById("statusBersih").textContent = hasil
@@ -729,7 +985,7 @@ document.getElementById("tombolBersihkanSekarang").addEventListener("click", asy
 });
 
 document.getElementById("tombolDarurat").addEventListener("click", async () => {
-  const terdeteksi = await cariSitusCookieLogin();
+  const terdeteksi = await daftarSitusDarurat();
   const pesan = document.getElementById("pesanBersih");
   if (terdeteksi.length === 0) {
     pesan.textContent = tr("darurat.kosong");
@@ -810,7 +1066,7 @@ function renderSemua() {
   tampilkanStatus();
   tampilkanPeringatan();
   tampilkanEkstensi();
-  tampilkanBersih();
+  tampilkanBersih(true);
   tampilkanDaftarPutih();
 }
 

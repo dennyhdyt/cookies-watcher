@@ -370,9 +370,219 @@ async function ambilSitusDipantau() {
   return SITUS_BAWAAN.slice();
 }
 
-// Pengaturan nama cookie sesi: memakai nama bawaan saja, tanpa tambahan dari pengguna.
+// Pengaturan nama cookie sesi: nama bawaan + nama yang kamu pilih per situs (lewat "Lindungi situs ini").
 async function ambilPengaturanNama() {
-  return { global: [], perSitus: {} };
+  const ps = await ambilPengaturanSitus();
+  const perSitus = {};
+  for (const situs of Object.keys(ps)) {
+    if (ps[situs].nama.length > 0) perSitus[situs] = ps[situs].nama;
+  }
+  return { global: [], perSitus: perSitus };
+}
+
+// ---------- Situs yang kamu lindungi (pilihan per situs) ----------
+//
+// Disimpan di storage.local "pengaturanSitus":
+//   { "discord.com": { nama: ["token"], semua: false, origins: ["https://discord.com"] } }
+// nama    = nama cookie login yang kamu pilih (isinya tidak pernah dibaca)
+// semua   = true: hapus SEMUA cookie situs, bukan hanya cookie login
+// origins = alamat situs yang SEMUA data penyimpanannya (localStorage) ikut dihapus
+// kunci   = nama kunci localStorage yang kamu pilih untuk dihapus satu per satu (butuh tab situs terbuka)
+
+const NAMA_COOKIE_VALID = /^[a-z0-9_.\-]{1,100}$/;
+
+// Membersihkan data mentah dari penyimpanan. Data rusak dibuang, bukan dipercaya.
+function rapikanPengaturanSitus(mentah) {
+  const hasil = {};
+  if (!mentah || typeof mentah !== "object" || Array.isArray(mentah)) return hasil;
+  for (const kunci of Object.keys(mentah)) {
+    const situs = String(kunci).toLowerCase();
+    const isi = mentah[kunci];
+    if (!situs || terlaluUmum(situs) || !isi || typeof isi !== "object") continue;
+    const nama = (Array.isArray(isi.nama) ? isi.nama : [])
+      .filter((x) => typeof x === "string")
+      .map((x) => x.toLowerCase())
+      .filter((x, i, a) => NAMA_COOKIE_VALID.test(x) && a.indexOf(x) === i)
+      .slice(0, 30);
+    const origins = [];
+    for (const o of Array.isArray(isi.origins) ? isi.origins : []) {
+      try {
+        const u = new URL(o);
+        const host = u.hostname.toLowerCase();
+        if (u.protocol !== "https:" && u.protocol !== "http:") continue;
+        if (host !== situs && !host.endsWith("." + situs)) continue;
+        if (!origins.includes(u.origin)) origins.push(u.origin);
+      } catch (e) {}
+      if (origins.length >= 10) break;
+    }
+    // Nama kunci localStorage yang kamu pilih (peka huruf besar/kecil; isinya tidak pernah dibaca).
+    const kunciStorage = (Array.isArray(isi.kunci) ? isi.kunci : [])
+      .filter((x) => typeof x === "string" && x.length > 0 && x.length <= 200)
+      .filter((x, i, a) => a.indexOf(x) === i)
+      .slice(0, 30);
+    const semua = isi.semua === true;
+    if (nama.length === 0 && origins.length === 0 && kunciStorage.length === 0 && !semua) continue;
+    hasil[situs] = { nama: nama, semua: semua, origins: origins, kunci: kunciStorage };
+  }
+  return hasil;
+}
+
+async function ambilPengaturanSitus() {
+  const data = await chrome.storage.local.get("pengaturanSitus");
+  return rapikanPengaturanSitus(data.pengaturanSitus);
+}
+
+// Menyimpan semua pilihan satu situs sekaligus (cookie pilihan, kapan dihapus, data penyimpanan).
+// opsi: { nama: [], semua: bool, origins: [], tabTutup: bool, browserDibuka: bool }
+async function simpanPerlindunganSitus(situs, opsi) {
+  situs = String(situs || "").toLowerCase();
+  if (!situs || terlaluUmum(situs)) return false;
+  const ps = await ambilPengaturanSitus();
+  ps[situs] = { nama: opsi.nama || [], semua: opsi.semua === true, origins: opsi.origins || [], kunci: opsi.kunci || [] };
+  const rapi = rapikanPengaturanSitus(ps);
+  const tab = (await ambilHapusSaatTabTutup()).filter((x) => x !== situs);
+  if (opsi.tabTutup) tab.push(situs);
+  const buka = (await ambilHapusSaatBuka()).filter((x) => x.situs !== situs);
+  if (opsi.browserDibuka) buka.push({ situs: situs, mode: opsi.semua ? "semua" : "sesi" });
+  await chrome.storage.local.set({ pengaturanSitus: rapi, hapusSaatTabTutup: tab, hapusSaatBuka: buka });
+  return true;
+}
+
+// Mengeluarkan satu situs dari semua daftar perlindungan.
+async function hapusPerlindunganSitus(situs) {
+  const ps = await ambilPengaturanSitus();
+  delete ps[situs];
+  const tab = (await ambilHapusSaatTabTutup()).filter((x) => x !== situs);
+  const buka = (await ambilHapusSaatBuka()).filter((x) => x.situs !== situs);
+  await chrome.storage.local.set({ pengaturanSitus: ps, hapusSaatTabTutup: tab, hapusSaatBuka: buka });
+}
+
+// Gabungan semua situs yang kamu lindungi (dari tiga sumber), untuk daftar di popup.
+async function ambilSitusTerlindungi() {
+  const [ps, tab, buka] = await Promise.all([ambilPengaturanSitus(), ambilHapusSaatTabTutup(), ambilHapusSaatBuka()]);
+  const semuaSitus = new Set(Object.keys(ps).concat(tab, buka.map((x) => x.situs)));
+  return Array.from(semuaSitus)
+    .sort()
+    .map((situs) => ({
+      situs: situs,
+      tabTutup: tab.includes(situs),
+      browserDibuka: buka.some((x) => x.situs === situs),
+      nama: (ps[situs] && ps[situs].nama) || [],
+      semua: !!(ps[situs] && ps[situs].semua),
+      origins: (ps[situs] && ps[situs].origins) || [],
+      kunci: (ps[situs] && ps[situs].kunci) || [],
+    }));
+}
+
+// Menilai apakah sebuah NAMA cookie mirip cookie login. Isi cookie tidak pernah dibaca.
+// Hasil: "dikenal" (ada di daftar nama login), "mirip" (nama mengandung sesi/token/dst),
+// "pelacak" (pelacak atau iklan yang umum), atau "lain".
+const POLA_PELACAK = /^(_ga|_gid|_gat|_gcl|_fbp|_fbc|_hj|_uet|_pin_|__cf|cf_|__dcf|__sdcf|__cfruid|ajs_|amplitude|_clck|_clsk|mp_|optimizely|_scid|_tt_)/;
+const POLA_MIRIP_LOGIN = /(sess|token|auth|sid|login|jwt|remember|credential|secure_id|user_id|uid)/;
+function jenisNamaCookie(nama, situs, pengaturan) {
+  const n = String(nama).toLowerCase();
+  if (namaLoginUntuk(situs, pengaturan).includes(n)) return "dikenal";
+  if (POLA_PELACAK.test(n)) return "pelacak";
+  if (POLA_MIRIP_LOGIN.test(n)) return "mirip";
+  return "lain";
+}
+
+// Menilai NAMA kunci localStorage: "mirip" (sesi/token/dst), "pelacak", atau "lain". Nilainya tidak pernah dibaca.
+function jenisNamaKunci(nama) {
+  const n = String(nama).toLowerCase();
+  if (POLA_PELACAK.test(n)) return "pelacak";
+  if (POLA_MIRIP_LOGIN.test(n)) return "mirip";
+  return "lain";
+}
+
+// Membaca NAMA kunci localStorage dari satu tab (nilainya tidak dibaca). Butuh izin opsional "scripting".
+// Mengembalikan null kalau izin belum ada atau tab tidak bisa dibaca.
+async function bacaNamaKunciTab(tabId) {
+  if (!chrome.scripting || typeof chrome.scripting.executeScript !== "function" || tabId == null) return null;
+  try {
+    const hasil = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      world: "ISOLATED",
+      func: () => {
+        try {
+          return Object.keys(localStorage).slice(0, 200).map((k) => String(k).slice(0, 200));
+        } catch (e) {
+          return [];
+        }
+      },
+    });
+    const r = hasil && hasil[0] && hasil[0].result;
+    return Array.isArray(r) ? r : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Menghapus kunci localStorage yang kamu pilih, di tab situs yang SEDANG terbuka (satu tab per alamat).
+// Tidak bisa jalan saat tab sudah tertutup; untuk itu pakai "hapus semua data penyimpanan".
+async function hapusKunciPenyimpananSitus(situs) {
+  const ps = await ambilPengaturanSitus();
+  const kunci = ps[situs] ? ps[situs].kunci : [];
+  if (kunci.length === 0) return 0;
+  if (!chrome.scripting || typeof chrome.scripting.executeScript !== "function") return 0;
+  let semuaTab = [];
+  try {
+    semuaTab = await chrome.tabs.query({});
+  } catch (e) {
+    return 0;
+  }
+  const sudah = new Set();
+  let jumlah = 0;
+  for (const tab of semuaTab) {
+    if (!tab.url || tab.id == null) continue;
+    let alamat;
+    try {
+      alamat = new URL(tab.url);
+    } catch (e) {
+      continue;
+    }
+    if (alamat.protocol !== "https:" && alamat.protocol !== "http:") continue;
+    if (domainUtama(alamat.hostname) !== situs || sudah.has(alamat.origin)) continue;
+    sudah.add(alamat.origin);
+    try {
+      const hasil = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        world: "ISOLATED",
+        args: [kunci],
+        func: (daftar) => {
+          let n = 0;
+          try {
+            const ada = Object.keys(localStorage);
+            for (const k of daftar) {
+              if (ada.includes(k)) {
+                localStorage.removeItem(k);
+                n++;
+              }
+            }
+          } catch (e) {}
+          return n;
+        },
+      });
+      jumlah += (hasil && hasil[0] && hasil[0].result) || 0;
+    } catch (e) {}
+  }
+  return jumlah;
+}
+
+// Menghapus data penyimpanan (localStorage) situs yang kamu izinkan. Hanya MENGHAPUS, tidak membaca.
+// Butuh izin opsional "browsingData"; tanpa izin itu tidak ada yang terjadi.
+// Hanya localStorage dan hanya untuk alamat yang kamu simpan; riwayat penelusuran tidak pernah disentuh.
+async function hapusDataPenyimpananSitus(situs) {
+  const ps = await ambilPengaturanSitus();
+  const origins = ps[situs] ? ps[situs].origins : [];
+  if (origins.length === 0) return 0;
+  if (!chrome.browsingData || typeof chrome.browsingData.remove !== "function") return 0;
+  try {
+    await chrome.browsingData.remove({ origins: origins }, { localStorage: true });
+    return origins.length;
+  } catch (e) {
+    return 0;
+  }
 }
 
 // Daftar nama cookie sesi yang berlaku untuk satu situs.
@@ -477,6 +687,8 @@ async function hapusCookieSitus(situs, mode, pengaturan) {
     await hapusCookie(cookie);
     jumlah++;
   }
+  jumlah += await hapusKunciPenyimpananSitus(situs);
+  jumlah += await hapusDataPenyimpananSitus(situs);
   return jumlah;
 }
 
@@ -509,16 +721,23 @@ async function catatRiwayatBersih(sumber, jumlah) {
 
 // ---------- Tombol darurat ----------
 
-// Menghapus cookie login SEMUA situs yang terdeteksi di browser ini.
-// Mengembalikan { situs: jumlah situs, cookie: jumlah cookie dihapus }.
+// Semua situs yang akan dikeluarkan: yang terdeteksi punya cookie login, ditambah situs yang kamu lindungi.
+async function daftarSitusDarurat() {
+  const [terdeteksi, terlindungi] = await Promise.all([cariSitusCookieLogin(), ambilSitusTerlindungi()]);
+  const semua = new Set(terdeteksi.map((x) => x.situs).concat(terlindungi.map((x) => x.situs)));
+  return Array.from(semua).sort();
+}
+
+// Menghapus login SEMUA situs di daftar itu di browser ini.
+// Mengembalikan { situs: jumlah situs, cookie: jumlah item yang dihapus }.
 async function keluarkanSemuaLogin() {
-  const [terdeteksi, pengaturan] = await Promise.all([cariSitusCookieLogin(), ambilPengaturanNama()]);
-  let cookie = 0;
-  for (const { situs } of terdeteksi) {
-    cookie += await hapusCookieSitus(situs, "sesi", pengaturan);
+  const [daftar, pengaturan, ps] = await Promise.all([daftarSitusDarurat(), ambilPengaturanNama(), ambilPengaturanSitus()]);
+  let jumlah = 0;
+  for (const situs of daftar) {
+    jumlah += await hapusCookieSitus(situs, ps[situs] && ps[situs].semua ? "semua" : "sesi", pengaturan);
   }
-  await catatRiwayatBersih("darurat", cookie);
-  return { situs: terdeteksi.length, cookie: cookie };
+  await catatRiwayatBersih("darurat", jumlah);
+  return { situs: daftar.length, cookie: jumlah };
 }
 
 // ---------- Hapus cookie login saat tab situs ditutup ----------
@@ -549,7 +768,8 @@ async function hapusSetelahTabTutup(situs, alamatTersisa) {
   const daftar = await ambilHapusSaatTabTutup();
   if (!daftar.includes(situs)) return 0;
   if (alamatTersisa.some((a) => situsDariAlamat(a) === situs)) return 0;
-  const jumlah = await hapusCookieSitus(situs, "sesi", await ambilPengaturanNama());
+  const ps = (await ambilPengaturanSitus())[situs];
+  const jumlah = await hapusCookieSitus(situs, ps && ps.semua ? "semua" : "sesi", await ambilPengaturanNama());
   if (jumlah > 0) await catatRiwayatBersih("tab", jumlah);
   return jumlah;
 }

@@ -30,7 +30,7 @@ Setelah mengubah kode, klik tombol refresh di kartu ekstensi pada halaman extens
 | `popup.js` | Logika tampilan: peringatan, pemindaian, pengaturan situs, nama cookie, bersihkan cookie, daftar putih |
 | `periksa-keamanan.js` | Alat bantu: `node periksa-keamanan.js` memeriksa izin dan melarang jaringan, eval, pembacaan nilai cookie, dll. |
 | `buat-rilis.js` | Alat bantu: membuat zip rilis dari commit terakhir plus checksum SHA-256 |
-| `SECURITY.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis |
+| `SECURITY.md` / `SECURITY.id.md` | Aturan keamanan, cara melapor kerentanan, daftar periksa rilis (Inggris / Indonesia) |
 
 ## Status pemantauan dan lencana di ikon
 
@@ -89,7 +89,7 @@ kadang bisa salah peringatan.
 
 ## Keamanan
 
-Ekstensi ini sengaja dibuat kecil permukaan serangnya. Detail lengkap ada di `SECURITY.md`.
+Ekstensi ini sengaja dibuat kecil permukaan serangnya. Detail lengkap ada di [`SECURITY.id.md`](SECURITY.id.md) ([English](SECURITY.md)).
 
 | Izin | Wajib? | Untuk apa |
 |---|---|---|

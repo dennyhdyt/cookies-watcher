@@ -35,7 +35,7 @@ After changing the code, click the refresh button on the extension's card on the
 | `popup.js` | Popup logic: alerts, scan, site settings, clean cookies, allowlist |
 | `periksa-keamanan.js` | Helper: `node periksa-keamanan.js` checks permissions and forbids network calls, eval, reading cookie values, etc. |
 | `buat-rilis.js` | Helper: builds a release zip from the latest commit plus a SHA-256 checksum |
-| `SECURITY.md` | Security rules, how to report vulnerabilities, release checklist (in Indonesian) |
+| `SECURITY.md` / `SECURITY.id.md` | Security rules, how to report vulnerabilities, release checklist (English / Indonesian) |
 
 ## Monitoring status and the icon badge
 
@@ -92,7 +92,7 @@ These are heuristics (educated guesses from signs), not proof of a takeover, so 
 
 ## Security
 
-This extension is deliberately built with a small attack surface. Full details are in `SECURITY.md`.
+This extension is deliberately built with a small attack surface. Full details are in [`SECURITY.md`](SECURITY.md) ([Bahasa Indonesia](SECURITY.id.md)).
 
 | Permission | Required? | What for |
 |---|---|---|

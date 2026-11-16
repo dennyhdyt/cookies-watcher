@@ -355,6 +355,19 @@ function periksaDomainMirip(domain, daftarSitus) {
       if (l.includes(merek) && KATA_PENIPUAN.test(l)) {
         return { ditiru: situs, alasan: tr("m.pancing", { m: merek }) };
       }
+
+      // 6) Salah ketik atau angka pengganti huruf, dipadukan dengan kata pancingan.
+      //    Contoh: "faceb00k-login", "facebok-verify", "faceb00klogin"
+      if (KATA_PENIPUAN.test(l)) {
+        const potongan = l.split(/[-_]/).filter((x) => x.length >= 5);
+        const potonganMirip = potongan.some((x) =>
+          variasiLeet(x).some((v) => v === merek || (v.length >= 5 && jarakEdit(v, merek) === 1))
+        );
+        const menyatu = variasiLeet(l).some((v) => v.includes(merek));
+        if (potonganMirip || menyatu) {
+          return { ditiru: situs, alasan: tr("m.gabungan", { m: merek }) };
+        }
+      }
     }
   }
   return null;
@@ -664,9 +677,10 @@ function domainUtama(domain) {
   return bagian.slice(indeksNamaUtama(bagian)).join(".");
 }
 
-// Mencari situs yang punya cookie login di browser ini (nama cookie ada di daftar nama sesi).
-// Yang dibaca hanya NAMA cookie, bukan nilainya.
-// Hasil: [{ situs, jumlah }] diurutkan dari abjad.
+// Mencari situs yang punya cookie login di browser ini. Hanya nama yang ADA di daftar nama login
+// yang dikenal (atau yang kamu pilih sendiri) yang dihitung. Nama yang cuma "mirip" tidak ikut,
+// karena banyak situs memasang cookie bernama sesi/token untuk pengunjung yang belum login.
+// Yang dibaca hanya NAMA cookie, bukan nilainya. Hasil: [{ situs, jumlah }] diurutkan dari abjad.
 async function cariSitusCookieLogin() {
   const pengaturan = await ambilPengaturanNama();
   const semua = await chrome.cookies.getAll({});
@@ -674,7 +688,7 @@ async function cariSitusCookieLogin() {
   for (const cookie of semua) {
     const situs = domainUtama(cookie.domain);
     if (!situs || terlaluUmum(situs)) continue;
-    if (!namaLoginUntuk(situs, pengaturan).includes(cookie.name.toLowerCase())) continue;
+    if (jenisNamaCookie(cookie.name, situs, pengaturan) !== "dikenal") continue;
     jumlahPerSitus[situs] = (jumlahPerSitus[situs] || 0) + 1;
   }
   return Object.keys(jumlahPerSitus)

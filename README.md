@@ -1,6 +1,6 @@
 # Pemantau Cookies (Cookie Watcher)
 
-Version 0.5.1 · Chrome and Edge · [Security / Keamanan](SECURITY.md)
+Version 0.6.0 · Chrome and Edge · [Security / Keamanan](SECURITY.md)
 
 **Pick a language / Pilih bahasa:** click a heading below to open it. / Klik judul di bawah untuk membukanya.
 
@@ -51,7 +51,7 @@ not cleared yet.
 ### Clean tab: login cookies detected automatically (optional)
 
 The **Clean** tab lists sites you visited that have login cookies, with no typing needed. The site in your
-current tab appears at the top. Each site has two buttons:
+current tab appears at the top. Detection looks at cookie **names** only (never values), and only names on the known login list are counted. Names that merely look like a login (`session`, `token`, ...) are ignored on purpose, because many sites set such cookies for visitors who are not logged in. Each site has two buttons:
 
 - **Add:** put the site on the list whose login cookies are deleted automatically every time the browser opens.
   A cookie stolen from an earlier session stops working, but you have to log in to that site again.
@@ -155,7 +155,9 @@ The honest limit: a browser extension cannot see Windows programs or services. A
 
 ### Automated tests
 
-Run `node tests/jalankan.js` (no browser, no installation). These tests also run automatically in GitHub Actions on every change to `main` or pull request, together with `periksa-keamanan.js`. The `tests` and `.github` folders are not included in the release zip.
+Run `node tests/jalankan.js` (no browser, no installation). These tests also run automatically in GitHub Actions on every change to `main` or pull request, together with `periksa-keamanan.js`. 
+
+Browser tests (real Chromium with the extension loaded, 12 suites): `npm ci --ignore-scripts && npx playwright install chromium && npm run test:e2e`. They run in GitHub Actions too (job `uji-chromium`); the Playwright version is pinned exactly. The `tests`, `.github`, `package.json` and `package-lock.json` files are not included in the release zip.
 
 </details>
 
@@ -201,7 +203,7 @@ berubah. Ikon di toolbar juga menampilkan angka merah sebesar jumlah peringatan 
 ### Tab Bersihkan: cookie login terdeteksi otomatis (opsional)
 
 Tab **Bersihkan** menampilkan situs yang kamu kunjungi dan punya cookie login, tanpa perlu mengetik apa pun.
-Situs di tab yang sedang dibuka muncul paling atas. Untuk tiap situs ada dua tombol:
+Situs di tab yang sedang dibuka muncul paling atas. Deteksi hanya melihat **nama** cookie (nilainya tidak pernah dibaca), dan hanya nama di daftar login dikenal yang dihitung. Nama yang cuma mirip login (`session`, `token`, dst.) sengaja diabaikan, karena banyak situs memasang cookie seperti itu untuk pengunjung yang belum login. Untuk tiap situs ada dua tombol:
 
 - **Tambahkan:** masukkan situs ke daftar yang cookie login-nya dihapus otomatis setiap browser dibuka. Cookie
   yang tercuri dari sesi sebelumnya jadi tidak berlaku lagi, tetapi kamu harus login ulang di situs itu.
@@ -307,6 +309,8 @@ Batas yang jujur: ekstensi browser tidak bisa melihat program atau service Windo
 
 ### Tes otomatis
 
-Jalankan `node tests/jalankan.js` (tanpa browser, tanpa instalasi). Tes ini juga berjalan otomatis di GitHub Actions setiap ada perubahan ke `main` atau pull request, bersama `periksa-keamanan.js`. Folder `tests` dan `.github` tidak ikut masuk ke zip rilis.
+Jalankan `node tests/jalankan.js` (tanpa browser, tanpa instalasi). Tes ini juga berjalan otomatis di GitHub Actions setiap ada perubahan ke `main` atau pull request, bersama `periksa-keamanan.js`. 
+
+Tes browser (Chromium sungguhan dengan ekstensi terpasang, 12 suite): `npm ci --ignore-scripts && npx playwright install chromium && npm run test:e2e`. Tes ini juga berjalan di GitHub Actions (job `uji-chromium`); versi Playwright dikunci tepat. Folder `tests`, `.github`, `package.json` dan `package-lock.json` tidak ikut masuk ke zip rilis.
 
 </details>

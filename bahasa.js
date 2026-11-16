@@ -211,6 +211,7 @@ const KAMUS = {
     "m.leet": "memakai angka/simbol untuk meniru nama '{m}'",
     "m.mirip": "namanya nyaris sama dengan '{m}'",
     "m.pancing": "memuat nama '{m}' dengan kata seperti login/verify",
+    "m.gabungan": "mirip nama '{m}' (salah ketik atau angka pengganti huruf) dan memuat kata seperti login/verify",
 
     // ----- Notifikasi dan peringatan dari latar belakang (background.js) -----
     "b.sesi.alasan": "Cookie sesi berubah padahal kamu tidak sedang membuka {s}",
@@ -418,6 +419,7 @@ const KAMUS = {
     "m.leet": "uses digits/symbols to imitate the name '{m}'",
     "m.mirip": "has a name almost identical to '{m}'",
     "m.pancing": "contains the name '{m}' with words like login/verify",
+    "m.gabungan": "looks like the name '{m}' (typo or digits replacing letters) and contains words like login/verify",
 
     // ----- Notifications and alerts from the background script (background.js) -----
     "b.sesi.alasan": "Session cookie changed while you did not have {s} open",

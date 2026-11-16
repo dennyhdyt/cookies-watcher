@@ -12,6 +12,9 @@ const harusDitandai = [
   ['g00gle.com', 'google.com'], ['facebook.evil.com', 'facebook.com'], ['gihtub.com', 'github.com'],
   ['tok0pedia.com', 'tokopedia.com'], ['linkedln.com', 'linkedin.com'], ['1nstagram.com', 'instagram.com'],
   ['notfacebook.com', 'facebook.com'],
+  ['faceb00k-login.com', 'facebook.com'], ['facebok-verify.net', 'facebook.com'], ['faceb00klogin.com', 'facebook.com'],
+  ['g00gle-account.xyz', 'google.com'], ['gihtub_login.com', 'github.com'], ['secure-linkedln.com', 'linkedin.com'],
+  ['www.g00gle-support.com', 'google.com'],
 ];
 const harusAman = [
   'facebook.com', 'm.facebook.com', 'accounts.google.com', 'google.co.id', 'google.com.sg', 'www.google.co.id',
@@ -19,6 +22,8 @@ const harusAman = [
   'doubleclick.net', 'tokopedia.com', 'shopee.co.id', 'bca.co.id', 'detik.com', 'kompas.com', 'gitlab.com',
   'microsoft.com', 'localhost', '127.0.0.1', '192.168.1.5', 'ads.tracker-cdn.net', 'cdn.jsdelivr.net',
   'facebookmail.com', 'youtube-nocookie.com', 'cdninstagram.com', 'x.com', 'twimg.com',
+  'login-portal.com', 'account-settings.net', 'secure-payments.id', 'update-center.com', 'support.microsoft.com',
+  'my-face-book-club.com', 'bookstore-login.com', 'goggles-shop.com', 'hub-support.com',
 ];
 let gagal = 0;
 for (const [d, ditiru] of harusDitandai) {

@@ -1,0 +1,26 @@
+const { chromium } = require('playwright'); const fs=require('fs'),path=require('path');
+const REPO=require('./lib').REPO, S=require('./lib').SCRATCH, E=S+'/ext-bp';
+fs.rmSync(E,{recursive:true,force:true}); fs.mkdirSync(E);
+for (const f of fs.readdirSync(REPO)) if (/\.(js|html|css|png|json)$/.test(f)&&f!=='package.json') fs.copyFileSync(REPO+'/'+f,E+'/'+f);
+const t=(ms)=>new Promise(r=>setTimeout(r,ms));
+(async()=>{
+ fs.rmSync(S+'/profil-bp',{recursive:true,force:true});
+ const ctx=await chromium.launchPersistentContext(S+'/profil-bp',{channel:'chromium',headless:true,args:['--disable-extensions-except='+E,'--load-extension='+E]});
+ const sw=ctx.serviceWorkers()[0]||await ctx.waitForEvent('serviceworker'); await t(1200);
+ await ctx.route(/^https?:\/\//,r=>r.fulfill({status:200,contentType:'text/html',body:'x'}));
+ await ctx.addCookies([{name:'sid_x',value:'v',domain:'.bp.test',path:'/',secure:true,expires:Math.floor(Date.now()/1000)+99999}]);
+ const p=await ctx.newPage(); await p.goto('chrome-extension://'+new URL(sw.url()).host+'/popup.html');
+ await p.evaluate(()=>{chrome.tabs.query=async()=>[{url:'https://bp.test/',active:true,id:1}];});
+ await p.click('#tab-bersih'); await p.evaluate(()=>tampilkanBersih()); await t(400);
+ await p.click('#tombolLindungi'); await t(600);
+ const idn=await p.locator('.panel-pilih').innerText();
+ await p.click('[data-bahasa="en"]'); await t(900);
+ const en=await p.locator('.panel-pilih').innerText();
+ const ok=(n,c)=>{console.log((c?'LULUS  ':'GAGAL  ')+n); if(!c)process.exitCode=1;};
+ ok('panel awal berbahasa Indonesia', /Pilih cookie login/.test(idn));
+ ok('setelah ganti ke EN: panel masih terbuka dan berbahasa Inggris', /Choose login cookies/.test(en) && !/Pilih cookie login/.test(en) && /When is the login deleted/.test(en));
+ ok('judul dan tombol kartu juga Inggris', /This tab/i.test(await p.locator('#tabIniBersih').innerText()) || /Protect/.test(await p.locator('#tabIniBersih').innerText()));
+ await p.click('[data-bahasa="id"]'); await t(900);
+ ok('kembali ke ID: panel berbahasa Indonesia lagi', /Pilih cookie login/.test(await p.locator('.panel-pilih').innerText()));
+ await ctx.close();
+})();

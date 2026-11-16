@@ -271,6 +271,8 @@ function periksaDomainPerhatian(domain) {
 function periksaDomainMirip(domain, daftarSitus) {
   const d = bersihkanDomain(domain).toLowerCase();
   if (!d || !d.includes(".") || /^[0-9.]+$/.test(d)) return null;
+  // Nama domain yang sah paling panjang 253 karakter; yang lebih panjang tidak diproses (anti-macet).
+  if (d.length > 253) return null;
 
   // Domain asli situs yang dipantau, atau domain resmi lain: aman.
   if (cocokSalahSatu(d, daftarSitus)) return null;
@@ -392,6 +394,13 @@ async function ambilPengaturanNama() {
 const NAMA_COOKIE_VALID = /^[a-z0-9_.\-]{1,100}$/;
 
 // Membersihkan data mentah dari penyimpanan. Data rusak dibuang, bukan dipercaya.
+// Memangkas teks yang berasal dari situs web (nama cookie, domain, path) sebelum disimpan sebagai
+// peringatan: membuang karakter kontrol dan membatasi panjangnya.
+function pangkasTeks(teks, maks) {
+  if (teks === null || teks === undefined) return "";
+  return String(teks).replace(/[\u0000-\u001f\u007f]/g, "").slice(0, maks);
+}
+
 function rapikanPengaturanSitus(mentah) {
   const hasil = {};
   if (!mentah || typeof mentah !== "object" || Array.isArray(mentah)) return hasil;

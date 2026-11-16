@@ -48,6 +48,13 @@ Include the steps to reproduce the problem, the extension version, and the brows
    recorded (session memory, not full addresses, never sent anywhere).
 6. **The interface never writes raw HTML.** All text (including cookie names and domains that
    other sites can control) is written with `textContent`.
+7. **Input from websites is treated as hostile.** Cookie names, domains, and paths are trimmed and
+   stripped of control characters before being stored, very long domains are not processed, stored
+   settings are validated on every read, and notifications are capped at 5 per hour (alerts are
+   still recorded) so a site flooding cookies cannot spam you. This is covered by
+   `tests/uji_input_jahat.js`.
+8. **The CI workflow is locked down.** GitHub Actions run with read-only permissions, the actions
+   used are pinned to exact commit hashes, and credentials are not kept after checkout.
 
 Rules 1 to 6 are checked automatically by `node periksa-keamanan.js`. That tool catches
 obvious mistakes and dangerous changes, but it is **not a guarantee**. Still read every
@@ -127,6 +134,13 @@ Sertakan langkah untuk mengulang masalahnya, versi ekstensi, dan browser yang di
    lengkap, tidak dikirim ke mana pun).
 6. **Tampilan tidak menulis HTML mentah.** Semua teks (termasuk nama cookie dan domain yang
    bisa dikendalikan situs lain) ditulis dengan `textContent`.
+7. **Masukan dari situs web dianggap berbahaya.** Nama cookie, domain, dan path dipangkas dan dibersihkan
+   dari karakter kontrol sebelum disimpan, domain yang terlalu panjang tidak diproses, pengaturan
+   tersimpan divalidasi setiap dibaca, dan notifikasi dibatasi 5 per jam (peringatan tetap tercatat)
+   supaya situs yang membanjiri cookie tidak bisa menerormu dengan notifikasi. Dicakup oleh
+   `tests/uji_input_jahat.js`.
+8. **Workflow CI dikunci.** GitHub Actions berjalan dengan izin baca saja, action yang dipakai dikunci ke
+   hash commit persis, dan kredensial tidak disimpan setelah checkout.
 
 Aturan 1 sampai 6 diperiksa otomatis oleh `node periksa-keamanan.js`. Alat itu menangkap
 kesalahan dan perubahan berbahaya yang jelas, tetapi **bukan jaminan**. Tetap baca setiap

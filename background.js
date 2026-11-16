@@ -38,7 +38,28 @@ async function catatCookieDilihat() {
   }
 }
 
-function kirimNotifikasi(judul, pesan) {
+// Batas laju: paling banyak 5 notifikasi per jam. Peringatan tetap tercatat di popup; ini hanya
+// mencegah situs yang membanjiri cookie membuat notifikasi tanpa henti.
+const BATAS_NOTIFIKASI_PER_JAM = 5;
+async function bolehNotifikasi() {
+  try {
+    const sekarang = Date.now();
+    const data = await chrome.storage.session.get("notifJam");
+    let catatan = data.notifJam;
+    if (!catatan || typeof catatan.mulai !== "number" || sekarang - catatan.mulai > 3600000) {
+      catatan = { mulai: sekarang, jumlah: 0 };
+    }
+    if (catatan.jumlah >= BATAS_NOTIFIKASI_PER_JAM) return false;
+    catatan.jumlah += 1;
+    await chrome.storage.session.set({ notifJam: catatan });
+    return true;
+  } catch (e) {
+    return true; // kalau penyimpanan sesi gagal, jangan sampai peringatan penting hilang
+  }
+}
+
+async function kirimNotifikasi(judul, pesan) {
+  if (!(await bolehNotifikasi())) return;
   chrome.notifications.create({
     type: "basic",
     iconUrl: "icon128.png",
@@ -89,6 +110,18 @@ async function catatPeringatan(peringatan) {
   const data = await chrome.storage.local.get("peringatan");
   const daftar = data.peringatan || [];
 
+  // Cookie sesi yang sama dari situs yang sama tidak dicatat ulang dalam 10 menit.
+  if (peringatan.jenis === "sesi") {
+    const baruSaja = daftar.some(
+      (p) =>
+        p.jenis === "sesi" &&
+        p.situs === peringatan.situs &&
+        p.nama === peringatan.nama &&
+        peringatan.waktu - (p.waktu || 0) < 10 * 60 * 1000
+    );
+    if (baruSaja) return false;
+  }
+
   // Satu domain tiruan cukup satu peringatan, walau cookie-nya banyak.
   if (peringatan.jenis === "domain-mirip") {
     const sudahAda = daftar.some(
@@ -118,18 +151,18 @@ async function simpanPeringatan(cookie, situs) {
     jenis: "sesi",
     waktu: Date.now(),
     situs: situs,
-    domain: cookie.domain,
-    nama: cookie.name,
-    path: cookie.path,
+    domain: pangkasTeks(cookie.domain, 253),
+    nama: pangkasTeks(cookie.name, 200),
+    path: pangkasTeks(cookie.path, 200),
     secure: cookie.secure,
-    storeId: cookie.storeId,
+    storeId: pangkasTeks(cookie.storeId, 50),
     alasan: tr("b.sesi.alasan", { s: situs }),
   });
 
   if (baru) {
     kirimNotifikasi(
       tr("b.sesi.judul", { s: situs }),
-      tr("b.sesi.isi", { n: cookie.name })
+      tr("b.sesi.isi", { n: pangkasTeks(cookie.name, 200) })
     );
   }
 }
@@ -143,11 +176,11 @@ async function simpanPeringatanDomain(cookie, mirip) {
     waktu: Date.now(),
     situs: domain,
     ditiru: mirip.ditiru,
-    domain: cookie.domain,
-    nama: cookie.name,
-    path: cookie.path,
+    domain: pangkasTeks(cookie.domain, 253),
+    nama: pangkasTeks(cookie.name, 200),
+    path: pangkasTeks(cookie.path, 200),
     secure: cookie.secure,
-    storeId: cookie.storeId,
+    storeId: pangkasTeks(cookie.storeId, 50),
     alasan: tr("b.dom.alasan", { a: mirip.alasan }),
   });
 

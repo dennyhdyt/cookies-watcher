@@ -1,6 +1,6 @@
 # Pemantau Cookies (Cookie Watcher)
 
-Version 0.6.0 · Chrome and Edge · [Security / Keamanan](SECURITY.md)
+Version 0.6.1 · Chrome and Edge · [Security / Keamanan](SECURITY.md)
 
 **Pick a language / Pilih bahasa:** click a heading below to open it. / Klik judul di bawah untuk membukanya.
 

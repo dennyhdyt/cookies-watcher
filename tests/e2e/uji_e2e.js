@@ -7,7 +7,7 @@ const S = require('./lib').SCRATCH;
 // Versi dengan izin "management" langsung aktif, supaya bagian ekstensi bisa diuji tanpa kotak izin browser.
 function buatVarian(tujuan) {
   fs.rmSync(tujuan, { recursive: true, force: true }); fs.mkdirSync(tujuan, { recursive: true });
-  for (const n of fs.readdirSync(require('./lib').REPO)) if (n !== '.git') fs.cpSync('/home/claude/pemantau-cookies/' + n, tujuan + '/' + n, { recursive: true });
+  for (const n of fs.readdirSync(require('./lib').REPO)) if (n !== '.git') fs.cpSync(require('path').join(require('./lib').REPO, n), tujuan + '/' + n, { recursive: true });
   const p = tujuan + '/manifest.json'; const m = JSON.parse(fs.readFileSync(p, 'utf8'));
   m.permissions.push('management'); m.optional_permissions = []; fs.writeFileSync(p, JSON.stringify(m));
   return tujuan;

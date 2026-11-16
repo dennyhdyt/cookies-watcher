@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pemantau Cookies",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Memantau perubahan cookies sesi yang mencurigakan dan membantu menghapusnya.",
   "permissions": ["cookies", "storage", "notifications"],
   "optional_permissions": ["management", "browsingData", "scripting"],

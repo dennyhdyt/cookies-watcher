@@ -147,7 +147,7 @@ async function tunggu(fn, ms = 6000) {
 
   // Klik "Keluar dari semua perangkat": buka halaman + catat waktu cek
   const [halamanKeamanan] = await Promise.all([ctx.waitForEvent('page'), itemSesi.getByText('Keluar dari semua perangkat').click()]);
-  const adaFb = await tunggu(() => diminta.some((u) => /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(u)) || /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(halamanKeamanan.url()), 20000);
+  const adaFb = await tunggu(() => diminta.some((u) => /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(u)) || /facebook\.com\/settings\?tab=security/.test(decodeURIComponent(halamanKeamanan.url())), 20000); // dengan internet sungguhan, Facebook bisa mengalihkan ke halaman login yang memuat alamat tujuan
   cek('3.6 Tombol "Keluar dari semua perangkat" meminta halaman keamanan facebook yang benar', adaFb, diminta.filter((u) => /facebook\.com/.test(u)).slice(0, 5).join(' ') + ' | url=' + halamanKeamanan.url());
   await halamanKeamanan.close();
 

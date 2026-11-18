@@ -3,6 +3,7 @@ const fs = require('fs');
 const E = require('./lib').REPO, S = require('./lib').SCRATCH, PROFIL = S + '/profil-buka';
 const ok = (n, c, d) => { console.log((c ? 'LULUS  ' : 'GAGAL  ') + n + (c ? '' : ' -> ' + String(JSON.stringify(d)).slice(0, 500))); if (!c) process.exitCode = 1; };
 const tidur = (ms) => new Promise((r) => setTimeout(r, ms));
+async function tunggu(fn, ms = 10000) { const m = Date.now(); for (;;) { try { if (await fn()) return true; } catch (e) { /* coba lagi */ } if (Date.now() - m > ms) return false; await tidur(150); } }
 const buka = () => chromium.launchPersistentContext(PROFIL, { channel: 'chromium', headless: true, args: ['--disable-extensions-except=' + E, '--load-extension=' + E] });
 const besok = Math.floor(Date.now() / 1000) + 86400 * 30;
 const ck = (name, domain) => ({ name, value: 'v', domain, path: '/', secure: true, expires: besok });
@@ -70,7 +71,9 @@ const namaCookie = async (ctx) => (await ctx.cookies()).map((c) => c.domain + ':
   sisa = await namaCookie(ctx);
   ok('7c cookie di subdomain (m.contoh.org) ikut terhapus lewat domain utama', !sisa.includes('m.contoh.org:sessionid'), sisa);
   // bersihkan semua
-  await p.click('#tombolBersihkanSekarang'); await tidur(700);
+  await tunggu(async () => !(await p.locator('#tombolBersihkanSekarang').isDisabled()));
+  await p.click('#tombolBersihkanSekarang');
+  await tunggu(async () => !(await namaCookie(ctx)).includes('.instagram.com:sessionid') && /3 cookie dihapus/.test(await teks('#pesanBersih')));
   sisa = await namaCookie(ctx);
   ok('8 "Bersihkan semua": login facebook & instagram hilang; locale/tema tetap', !sisa.includes('.facebook.com:xs') && !sisa.includes('.facebook.com:c_user') && !sisa.includes('.instagram.com:sessionid') && sisa.includes('.facebook.com:locale') && sisa.includes('.instagram.com:tema'), sisa);
   ok('8b pesan & status: 3 cookie', /3 cookie dihapus/.test(await teks('#pesanBersih')) && /\(3 cookie\)/.test(await teks('#statusBersih')), [await teks('#pesanBersih'), await teks('#statusBersih')]);

@@ -147,8 +147,8 @@ async function tunggu(fn, ms = 6000) {
 
   // Klik "Keluar dari semua perangkat": buka halaman + catat waktu cek
   const [halamanKeamanan] = await Promise.all([ctx.waitForEvent('page'), itemSesi.getByText('Keluar dari semua perangkat').click()]);
-  const adaFb = await tunggu(() => diminta.some((u) => /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(u)));
-  cek('3.6 Tombol "Keluar dari semua perangkat" meminta halaman keamanan facebook yang benar', adaFb, diminta.slice(-5).join(' '));
+  const adaFb = await tunggu(() => diminta.some((u) => /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(u)) || /^https:\/\/www\.facebook\.com\/settings\?tab=security/.test(halamanKeamanan.url()), 20000);
+  cek('3.6 Tombol "Keluar dari semua perangkat" meminta halaman keamanan facebook yang benar', adaFb, diminta.filter((u) => /facebook\.com/.test(u)).slice(0, 5).join(' ') + ' | url=' + halamanKeamanan.url());
   await halamanKeamanan.close();
 
   // Hapus satu cookie dari peringatan
